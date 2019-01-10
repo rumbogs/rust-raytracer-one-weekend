@@ -1,0 +1,8 @@
+[package]
+name = "raytracing-one-weekend"
+version = "0.1.0"
+authors = ["Bogdan <none>"]
+edition = "2018"
+
+[dependencies]
+image = "*"
