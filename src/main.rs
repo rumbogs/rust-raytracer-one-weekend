@@ -1,4 +1,25 @@
+mod vector3;
 extern crate image;
+
+// cannot use, open issue here https://github.com/rust-lang/rust/issues/56417
+// use vector3::Vector3;
+
+struct Ray {
+    A: vector3::Vector3,
+    B: vector3::Vector3,
+}
+
+impl Ray {
+    fn origin(&self) -> vector3::Vector3 {
+        self.A
+    }
+    fn direction(&self) -> vector3::Vector3 {
+        self.B
+    }
+    fn point_at_parameter(&self, t: f32) -> vector3::Vector3 {
+        self.A + t * self.B
+    }
+}
 
 fn main() {
     let nx: u32 = 200;
