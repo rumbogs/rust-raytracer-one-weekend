@@ -2,15 +2,19 @@ use std::ops::{
   Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
+#[derive(Copy, Clone)]
 pub struct Vector3 {
   pub e: [f32; 3],
 }
 
 impl Vector3 {
+  pub fn new(x: f32, y: f32, z: f32) -> Vector3 {
+    Vector3 { e: [x, y, z] }
+  }
   pub fn x(&self) -> f32 {
     self.e[0]
   }
-  fn y(&self) -> f32 {
+  pub fn y(&self) -> f32 {
     self.e[1]
   }
   fn z(&self) -> f32 {
@@ -46,13 +50,11 @@ impl Add for Vector3 {
   type Output = Vector3;
 
   fn add(self, other: Vector3) -> Vector3 {
-    Vector3 {
-      e: [
-        self.e[0] + other.e[0],
-        self.e[1] + other.e[1],
-        self.e[2] + other.e[2],
-      ],
-    }
+    Vector3::new(
+      self.e[0] + other.e[0],
+      self.e[1] + other.e[1],
+      self.e[2] + other.e[2],
+    )
   }
 }
 
@@ -60,13 +62,11 @@ impl Sub for Vector3 {
   type Output = Vector3;
 
   fn sub(self, other: Vector3) -> Vector3 {
-    Vector3 {
-      e: [
-        self.e[0] - other.e[0],
-        self.e[1] - other.e[1],
-        self.e[2] - other.e[2],
-      ],
-    }
+    Vector3::new(
+      self.e[0] - other.e[0],
+      self.e[1] - other.e[1],
+      self.e[2] - other.e[2],
+    )
   }
 }
 
@@ -74,13 +74,11 @@ impl Mul for Vector3 {
   type Output = Vector3;
 
   fn mul(self, other: Vector3) -> Vector3 {
-    Vector3 {
-      e: [
-        self.e[0] * other.e[0],
-        self.e[1] * other.e[1],
-        self.e[2] * other.e[2],
-      ],
-    }
+    Vector3::new(
+      self.e[0] * other.e[0],
+      self.e[1] * other.e[1],
+      self.e[2] * other.e[2],
+    )
   }
 }
 
@@ -88,13 +86,11 @@ impl Div for Vector3 {
   type Output = Vector3;
 
   fn div(self, other: Vector3) -> Vector3 {
-    Vector3 {
-      e: [
-        self.e[0] / other.e[0],
-        self.e[1] / other.e[1],
-        self.e[2] / other.e[2],
-      ],
-    }
+    Vector3::new(
+      self.e[0] / other.e[0],
+      self.e[1] / other.e[1],
+      self.e[2] / other.e[2],
+    )
   }
 }
 
@@ -102,9 +98,7 @@ impl Mul<f32> for Vector3 {
   type Output = Vector3;
 
   fn mul(self, other: f32) -> Vector3 {
-    Vector3 {
-      e: [self.e[0] * other, self.e[1] * other, self.e[2] * other],
-    }
+    Vector3::new(self.e[0] * other, self.e[1] * other, self.e[2] * other)
   }
 }
 
@@ -112,9 +106,7 @@ impl Mul<Vector3> for f32 {
   type Output = Vector3;
 
   fn mul(self, other: Vector3) -> Vector3 {
-    Vector3 {
-      e: [self * other.e[0], self * other.e[1], self * other.e[2]],
-    }
+    Vector3::new(self * other.e[0], self * other.e[1], self * other.e[2])
   }
 }
 
@@ -122,9 +114,7 @@ impl Div<f32> for Vector3 {
   type Output = Vector3;
 
   fn div(self, other: f32) -> Vector3 {
-    Vector3 {
-      e: [self.e[0] / other, self.e[1] / other, self.e[2] / other],
-    }
+    Vector3::new(self.e[0] / other, self.e[1] / other, self.e[2] / other)
   }
 }
 
@@ -132,9 +122,7 @@ impl Neg for Vector3 {
   type Output = Vector3;
 
   fn neg(self) -> Vector3 {
-    Vector3 {
-      e: [-self.e[0], -self.e[1], -self.e[2]],
-    }
+    Vector3::new(-self.e[0], -self.e[1], -self.e[2])
   }
 }
 
@@ -207,13 +195,11 @@ pub fn dot(v1: Vector3, v2: Vector3) -> f32 {
 }
 
 pub fn cross(v1: Vector3, v2: Vector3) -> Vector3 {
-  Vector3 {
-    e: [
-      v1.e[1] * v2.e[2] - v1.e[2] * v2.e[1],
-      -(v1.e[0] * v2.e[2] - v1.e[2] * v2.e[0]),
-      v1.e[0] * v2.e[1] - v1.e[1] * v2.e[0],
-    ],
-  }
+  Vector3::new(
+    v1.e[1] * v2.e[2] - v1.e[2] * v2.e[1],
+    -(v1.e[0] * v2.e[2] - v1.e[2] * v2.e[0]),
+    v1.e[0] * v2.e[1] - v1.e[1] * v2.e[0],
+  )
 }
 
 pub fn unit_vector(v: Vector3) -> Vector3 {
