@@ -17,7 +17,7 @@ impl Vector3 {
   pub fn y(&self) -> f32 {
     self.e[1]
   }
-  fn z(&self) -> f32 {
+  pub fn z(&self) -> f32 {
     self.e[2]
   }
   fn r(&self) -> f32 {

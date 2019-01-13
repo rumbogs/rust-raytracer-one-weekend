@@ -1,17 +1,26 @@
 extern crate image;
 
+mod hitable;
 mod ray;
 mod vector3;
 
 // cannot use, open issue here https://github.com/rust-lang/rust/issues/56417
 // use vector3::Vector3;
 
-fn color(r: &ray::Ray) -> vector3::Vector3 {
-    let unit_direction = vector3::unit_vector(r.direction());
-    let t: f32 = 0.5 * (unit_direction.y() + 1.0);
-    let a: vector3::Vector3 = vector3::Vector3::new(1.0, 1.0, 1.0);
-    let b: vector3::Vector3 = vector3::Vector3::new(0.5, 0.7, 1.0);
-    (1.0 - t) * a + t * b
+fn color(r: &ray::Ray, world: hitable::Hitable) -> vector3::Vector3 {
+    let rec: hitable::hit_record;
+    if world.hit(r, 0.0, MAXFLOAT, rec) {
+        return 0.5
+            * vector3::Vector3::new(
+                rec.normal.x() + 1.0,
+                rec.normal.y() + 1.0,
+                rec.normal.z() + 1.0,
+            );
+    } else {
+        let unit_direction = vector3::unit_vector(r.direction());
+        let t: f32 = 0.5 * (unit_direction.y() + 1.0);
+        (1.0 - t) * vector3::Vector3::new(1.0, 1.0, 1.0) + t * vector3::Vector3::new(0.5, 0.7, 1.0)
+    }
 }
 
 fn main() {
