@@ -17,14 +17,26 @@ use ray::Ray;
 use sphere::Sphere;
 use vector3::{unit_vector, Vector3};
 
+fn random_in_unit_sphere() -> Vector3 {
+    let mut p: Vector3;
+    loop {
+        let mut rng = rand::thread_rng();
+        p = 2.0 * Vector3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>())
+            - Vector3::new(1.0, 1.0, 1.0); // -1 -> 1
+        if p.squared_length() < 1.0 {
+            break;
+        }
+    }
+    p
+}
+
 fn color(r: &Ray, world: &ObjectList) -> Vector3 {
-    match world.hit(r, 0.0, std::f32::MAX) {
+    // some of the rays hit at 0.00000001 instead of 0.0
+    // so ignore those to remove noise
+    match world.hit(r, 0.001, std::f32::MAX) {
         Some(rec) => {
-            0.5 * Vector3::new(
-                rec.normal.x() + 1.0,
-                rec.normal.y() + 1.0,
-                rec.normal.z() + 1.0,
-            )
+            let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
+            0.5 * color(&Ray::new(rec.p, target - rec.p), world)
         }
         None => {
             let unit_direction = unit_vector(r.direction());
@@ -72,6 +84,8 @@ fn main() {
             col += color(&r, &world);
         }
         col /= antialiasing_sensitivity as f32;
+        // remove the gamma of 2 from the color (raise to power of 1/2)
+        col = Vector3::new(col[0].sqrt(), col[1].sqrt(), col[2].sqrt());
         let ir = (255.99 * &col[0]) as u8;
         let ig = (255.99 * &col[1]) as u8;
         let ib = (255.99 * &col[2]) as u8;

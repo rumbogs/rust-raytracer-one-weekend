@@ -34,7 +34,7 @@ impl Vector3 {
     (self.e[0] * self.e[0] + self.e[1] * self.e[1] + self.e[2] * self.e[2]).sqrt()
   }
 
-  fn squared_length(&self) -> f32 {
+  pub fn squared_length(&self) -> f32 {
     self.e[0] * self.e[0] + self.e[1] * self.e[1] + self.e[2] * self.e[2]
   }
 
