@@ -1,20 +1,26 @@
-use super::object::{HitRecord, Object};
+use super::material::Material;
+use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
 use super::vector3::{dot, Vector3};
 
 pub struct Sphere {
   center: Vector3,
   radius: f32,
+  material: Material,
 }
 
 impl Sphere {
-  pub fn new(center: Vector3, radius: f32) -> Sphere {
-    Sphere { center, radius }
+  pub fn new(center: Vector3, radius: f32, material: Material) -> Self {
+    Sphere {
+      center,
+      radius,
+      material,
+    }
   }
 }
 
-impl Object for Sphere {
-  fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+impl Hittable for Sphere {
+  fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
     let oc: Vector3 = r.origin() - self.center;
     let a: f32 = dot(r.direction(), r.direction());
     let b: f32 = dot(oc, r.direction());
@@ -26,14 +32,14 @@ impl Object for Sphere {
         let t = temp;
         let p = r.point_at_parameter(t);
         let normal = (p - self.center) / self.radius;
-        return Some(HitRecord::new(t, p, normal));
+        return Some((HitRecord::new(t, p, normal), &self.material));
       }
       temp = (-b + (b * b - a * c).sqrt()) / a;
       if temp < t_max && temp > t_min {
         let t = temp;
         let p = r.point_at_parameter(t);
         let normal = (p - self.center) / self.radius;
-        return Some(HitRecord::new(t, p, normal));
+        return Some((HitRecord::new(t, p, normal), &self.material));
       }
     }
     None

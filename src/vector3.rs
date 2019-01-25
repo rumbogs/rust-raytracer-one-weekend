@@ -20,13 +20,13 @@ impl Vector3 {
   pub fn z(&self) -> f32 {
     self.e[2]
   }
-  fn r(&self) -> f32 {
+  pub fn r(&self) -> f32 {
     self.e[0]
   }
-  fn g(&self) -> f32 {
+  pub fn g(&self) -> f32 {
     self.e[1]
   }
-  fn b(&self) -> f32 {
+  pub fn b(&self) -> f32 {
     self.e[2]
   }
 

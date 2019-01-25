@@ -1,3 +1,4 @@
+use super::material::Material;
 use super::ray::Ray;
 use super::vector3::Vector3;
 
@@ -13,6 +14,6 @@ impl HitRecord {
   }
 }
 
-pub trait Object {
-  fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
+pub trait Hittable {
+  fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)>;
 }

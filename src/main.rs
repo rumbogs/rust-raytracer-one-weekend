@@ -1,9 +1,14 @@
 extern crate image;
+extern crate indicatif;
 extern crate rand;
 
+use indicatif::{ProgressBar, ProgressStyle};
 use rand::Rng;
+use std::cmp;
+use std::time::Instant;
 
 mod camera;
+mod material;
 mod object;
 mod object_list;
 mod ray;
@@ -11,7 +16,8 @@ mod sphere;
 mod vector3;
 
 use camera::Camera;
-use object::Object;
+use material::{Material, MaterialType, Scatterable};
+use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
@@ -30,13 +36,21 @@ fn random_in_unit_sphere() -> Vector3 {
     p
 }
 
-fn color(r: &Ray, world: &ObjectList) -> Vector3 {
+fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
     // some of the rays hit at 0.00000001 instead of 0.0
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
-        Some(rec) => {
-            let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
-            0.5 * color(&Ray::new(rec.p, target - rec.p), world)
+        Some((rec, material)) => {
+            if depth < 50 {
+                match material.scatter(r, rec) {
+                    Some((attenuation, scattered)) => {
+                        attenuation * color(&scattered, world, depth + 1)
+                    }
+                    None => Vector3::new(0.0, 0.0, 0.0),
+                }
+            } else {
+                Vector3::new(0.0, 0.0, 0.0)
+            }
         }
         None => {
             let unit_direction = unit_vector(r.direction());
@@ -47,6 +61,7 @@ fn color(r: &Ray, world: &ObjectList) -> Vector3 {
 }
 
 fn main() {
+    let now = Instant::now();
     let width: u32 = 200;
     let height: u32 = 100;
     let antialiasing_sensitivity: u32 = 100;
@@ -58,12 +73,36 @@ fn main() {
     );
 
     // TODO: check implementation performance (Box)
-    let world: ObjectList = ObjectList::new(vec![
-        Box::new(Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5)),
-        Box::new(Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0)),
+    let world = ObjectList::new(vec![
+        Box::new(Sphere::new(
+            Vector3::new(0.0, 0.0, -1.0),
+            0.5,
+            Material::new(MaterialType::Lambertian, Vector3::new(0.8, 0.3, 0.3)),
+        )),
+        Box::new(Sphere::new(
+            Vector3::new(0.0, -100.5, -1.0),
+            100.0,
+            Material::new(MaterialType::Lambertian, Vector3::new(0.8, 0.8, 0.0)),
+        )),
+        Box::new(Sphere::new(
+            Vector3::new(1.0, 0.0, -1.0),
+            0.5,
+            Material::new(MaterialType::Metal, Vector3::new(0.8, 0.6, 0.2)),
+        )),
+        Box::new(Sphere::new(
+            Vector3::new(-1.0, 0.0, -1.0),
+            0.5,
+            Material::new(MaterialType::Metal, Vector3::new(0.8, 0.8, 0.8)),
+        )),
     ]);
 
     let mut imgbuf = image::ImageBuffer::new(width, height);
+    let progress_bar = ProgressBar::new((width * height) as u64);
+    progress_bar.set_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] {bar:40.cyan/blue} {percent:>7}% {msg}")
+            .progress_chars("##-"),
+    );
 
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         // x is [0..width]
@@ -81,7 +120,7 @@ fn main() {
             let u = (x as f32 + rng.gen::<f32>()) / width as f32;
             let v = (inverted_y as f32 + rng.gen::<f32>()) / height as f32;
             let r = camera.get_ray(u, v);
-            col += color(&r, &world);
+            col += color(&r, &world, 0);
         }
         col /= antialiasing_sensitivity as f32;
         // remove the gamma of 2 from the color (raise to power of 1/2)
@@ -90,7 +129,14 @@ fn main() {
         let ig = (255.99 * &col[1]) as u8;
         let ib = (255.99 * &col[2]) as u8;
         *pixel = image::Rgb([ir, ig, ib]);
+        progress_bar.inc(1);
     }
 
+    progress_bar.finish();
+    println!(
+        "Finished in {}s {}ms",
+        now.elapsed().as_secs(),
+        (now.elapsed().subsec_nanos() / 1_000_000) as u64
+    );
     imgbuf.save("1.png").unwrap();
 }
