@@ -4,11 +4,15 @@ use super::ray::Ray;
 // use super::sphere::{Plane, Sphere};
 
 pub struct ObjectList {
-  pub list: Vec<Box<dyn Hittable>>,
+  // this needs to be dynamic to allow for different
+  // structs that implement the Hittable trait
+  // otherwise it would allow for only one kind
+  // e.g. Sphere
+  pub list: Vec<Box<dyn Hittable + Sync>>,
 }
 
 impl ObjectList {
-  pub fn new(list: Vec<Box<dyn Hittable>>) -> Self {
+  pub fn new(list: Vec<Box<dyn Hittable + Sync>>) -> Self {
     ObjectList { list }
   }
 }
