@@ -1,15 +1,9 @@
 extern crate crossbeam;
 extern crate image;
-// extern crate indicatif;
 extern crate num_cpus;
 extern crate rand;
 
-use image::png::PNGEncoder;
-use image::ColorType;
-// use indicatif::{ProgressBar, ProgressStyle};
 use rand::Rng;
-use std::cmp;
-use std::fs::File;
 use std::time::Instant;
 
 mod camera;
@@ -27,10 +21,6 @@ use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
 use vector3::{unit_vector, Vector3};
-
-fn save_image(buffer: &[u8], width: u32, height: u32) -> Result<(), std::io::Error> {
-    image::save_buffer("1.png", buffer, width, height, image::RGB(8))
-}
 
 fn random_in_unit_sphere() -> Vector3 {
     let mut p: Vector3;
@@ -72,8 +62,9 @@ fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
 fn main() {
     let cpu_num = num_cpus::get();
     let now = Instant::now();
-    let width: u32 = 200;
-    let height: u32 = 100;
+    let width = 200;
+    let height = 100;
+    let thread_rows = height / cpu_num;
     let antialiasing_sensitivity: u32 = 100;
     let camera: &Camera = &Camera::new(
         Vector3::new(0.0, 0.0, 0.0),
@@ -121,31 +112,21 @@ fn main() {
         )),
     ]);
 
-    // let mut imgbuf = image::ImageBuffer::new(width, height);
-    // let progress_bar = ProgressBar::new((width * height) as u64);
-    // progress_bar.set_style(
-    //     ProgressStyle::default_bar()
-    //         .template("[{elapsed_precise}] {bar:40.cyan/blue} {percent:>7}% {msg}")
-    //         .progress_chars("##-"),
-    // );
+    let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
+    let rows: Vec<&mut [Vector3]> = pixels.chunks_mut(thread_rows * width).collect();
 
-    let thread_rows: u32 = height / cpu_num as u32 + 1;
-    let mut buffer = vec![0; (width * height * 3) as usize];
-    let rows: Vec<&mut [u8]> = buffer
-        .chunks_mut((thread_rows * width * 3) as usize)
-        .collect();
-    //TODO: correct division between rows of pixels
-    crossbeam::scope(|spawner| {
+    match crossbeam::scope(|spawner| {
         for (i, row) in rows.into_iter().enumerate() {
             spawner.spawn(move |_| {
-                for y in 0..height {
+                for y in 0..thread_rows {
                     for x in 0..width {
-                        // x is [0..width]
-                        // y is [0..height]
-                        // red goes from left to right
-                        // green goes from bottom to top
                         let mut col: Vector3 = Vector3::new(0.0, 0.0, 0.0);
-                        let inverted_y = height - y;
+                        // rows and y need to be calculated from bottom up
+                        // but buffer needs to written from top down
+                        // also subtract one because the for loop isn't inclusive
+                        // on the right hand side
+                        let inverted_y = thread_rows - y - 1;
+                        let inverted_row = ((cpu_num - i - 1) * thread_rows + inverted_y) as f32;
                         let mut rng = rand::thread_rng();
 
                         // this shoots rays around the object
@@ -153,7 +134,7 @@ fn main() {
                         // and computes a color average
                         for _ in 0..antialiasing_sensitivity {
                             let u = (x as f32 + rng.gen::<f32>()) / width as f32;
-                            let v = (inverted_y as f32 + rng.gen::<f32>()) / height as f32;
+                            let v = (inverted_row + rng.gen::<f32>()) / height as f32;
                             let r = camera.get_ray(u, v);
                             col += color(&r, &world, 0);
                         }
@@ -164,28 +145,30 @@ fn main() {
                         let ig = (255.99 * &col[1]) as u8;
                         let ib = (255.99 * &col[2]) as u8;
                         // save buffer values
-                        row[(3 * (y * width + x)) as usize] = ir;
-                        row[(3 * (y * width + x) + 1) as usize] = ig;
-                        row[(3 * (y * width + x) + 2) as usize] = ib;
-                        // progress_bar.inc(1);
-                        print!("\r{}s", now.elapsed().as_secs());
+                        let buffer_pos = y * width + x;
+                        row[buffer_pos][0] = ir as f32;
+                        row[buffer_pos][1] = ig as f32;
+                        row[buffer_pos][2] = ib as f32;
                     }
                 }
             });
         }
-    })
-    .unwrap();
-
-    match save_image(&buffer, width, height) {
-        Ok(()) => println!("OK"),
-        Err(err) => println!("{}", err),
+    }) {
+        Ok(()) => println!(
+            "Finished in {}s {}ms",
+            now.elapsed().as_secs(),
+            (now.elapsed().subsec_nanos() / 1_000_000) as u64
+        ),
+        Err(err) => println!("{:?}", err),
     };
 
-    // progress_bar.finish();
-    println!(
-        "Finished in {}s {}ms",
-        now.elapsed().as_secs(),
-        (now.elapsed().subsec_nanos() / 1_000_000) as u64
-    );
-    // imgbuf.save("1.png").unwrap();
+    let mut buffer = vec![];
+
+    for pixel in pixels {
+        buffer.push(pixel[0] as u8);
+        buffer.push(pixel[1] as u8);
+        buffer.push(pixel[2] as u8);
+    }
+
+    image::save_buffer("1.png", &buffer, width as u32, height as u32, image::RGB(8)).unwrap();
 }

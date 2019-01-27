@@ -7,6 +7,5 @@ edition = "2018"
 [dependencies]
 image = "*"
 rand = "*"
-indicatif = "*"
 crossbeam = "*"
 num_cpus = "*"
