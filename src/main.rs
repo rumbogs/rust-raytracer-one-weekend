@@ -61,10 +61,17 @@ fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
 
 fn main() {
     let cpu_num = num_cpus::get();
+    let mut computing_threads = cpu_num;
     let now = Instant::now();
     let width = 200;
     let height = 100;
-    let thread_rows = height / cpu_num;
+    //TODO: check for better solution
+    // use one less thread for exact division
+    // the last one will have less pixels to calculate
+    if height % cpu_num != 0 {
+        computing_threads = cpu_num - 1;
+    }
+    let thread_rows = height / computing_threads;
     let antialiasing_sensitivity: u32 = 100;
     let camera: &Camera = &Camera::new(
         Vector3::new(0.0, 0.0, 0.0),
@@ -122,10 +129,12 @@ fn main() {
                     for x in 0..width {
                         let mut col: Vector3 = Vector3::new(0.0, 0.0, 0.0);
                         // rows and y need to be calculated from bottom up
-                        // but buffer needs to written from top down
+                        // but buffer needs to be written from top down
                         // also subtract one because the for loop isn't inclusive
                         // on the right hand side
                         let inverted_y = thread_rows - y - 1;
+                        // println!("{}", i);
+
                         let inverted_row = ((cpu_num - i - 1) * thread_rows + inverted_y) as f32;
                         let mut rng = rand::thread_rng();
 
@@ -146,6 +155,12 @@ fn main() {
                         let ib = (255.99 * &col[2]) as u8;
                         // save buffer values
                         let buffer_pos = y * width + x;
+                        // when the height doesn't divide to the thread no
+                        // the last row doesn't have the same number of
+                        // pixels so check if we don't go over
+                        if buffer_pos >= row.len() {
+                            return;
+                        }
                         row[buffer_pos][0] = ir as f32;
                         row[buffer_pos][1] = ig as f32;
                         row[buffer_pos][2] = ib as f32;
