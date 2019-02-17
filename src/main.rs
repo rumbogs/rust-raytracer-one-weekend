@@ -22,6 +22,106 @@ use ray::Ray;
 use sphere::Sphere;
 use vector3::{unit_vector, Vector3};
 
+fn random_scene() -> ObjectList {
+    let n: usize = 500;
+    let mut object_list: Vec<Box<Hittable + Sync>> = Vec::with_capacity(n + 1);
+    let mut rng = rand::thread_rng();
+
+    object_list.push(Box::new(Sphere::new(
+        Vector3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        Material::new(
+            MaterialType::Lambertian,
+            Vector3::new(0.5, 0.5, 0.5),
+            0.0,
+            0.0,
+        ),
+    )));
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let choose_mat: f32 = rng.gen::<f32>();
+            let center: Vector3 = Vector3::new(
+                a as f32 + 0.9 * rng.gen::<f32>(),
+                0.2,
+                b as f32 + 0.9 * rng.gen::<f32>(),
+            );
+            if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+                if choose_mat < 0.8 {
+                    object_list.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Material::new(
+                            MaterialType::Lambertian,
+                            Vector3::new(
+                                rng.gen::<f32>() * rng.gen::<f32>(),
+                                rng.gen::<f32>() * rng.gen::<f32>(),
+                                rng.gen::<f32>() * rng.gen::<f32>(),
+                            ),
+                            0.0,
+                            0.0,
+                        ),
+                    )));
+                } else if choose_mat < 0.95 {
+                    object_list.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Material::new(
+                            MaterialType::Metal,
+                            Vector3::new(
+                                0.5 * (1.0 + rng.gen::<f32>()),
+                                0.5 * (1.0 + rng.gen::<f32>()),
+                                0.5 * (1.0 + rng.gen::<f32>()),
+                            ),
+                            0.5 * rng.gen::<f32>(),
+                            0.0,
+                        ),
+                    )));
+                } else {
+                    object_list.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Material::new(
+                            MaterialType::Dielectric,
+                            Vector3::new(0.0, 0.0, 0.0),
+                            0.0,
+                            1.5,
+                        ),
+                    )));
+                }
+            }
+        }
+    }
+
+    object_list.push(Box::new(Sphere::new(
+        Vector3::new(0.0, 1.0, 0.0),
+        1.0,
+        Material::new(
+            MaterialType::Dielectric,
+            Vector3::new(0.0, 0.0, 0.0),
+            0.0,
+            1.5,
+        ),
+    )));
+    object_list.push(Box::new(Sphere::new(
+        Vector3::new(-4.0, 1.0, 0.0),
+        1.0,
+        Material::new(
+            MaterialType::Lambertian,
+            Vector3::new(0.4, 0.2, 0.1),
+            0.0,
+            0.0,
+        ),
+    )));
+    object_list.push(Box::new(Sphere::new(
+        Vector3::new(4.0, 1.0, 0.0),
+        1.0,
+        Material::new(MaterialType::Metal, Vector3::new(0.7, 0.6, 0.5), 0.0, 0.0),
+    )));
+
+    ObjectList::new(object_list)
+}
+
 fn random_in_unit_sphere() -> Vector3 {
     let mut p: Vector3;
     loop {
@@ -60,72 +160,45 @@ fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
 }
 
 fn main() {
-    let cpu_num = num_cpus::get();
-    let mut computing_threads = cpu_num;
+    let cpu_num = num_cpus::get() - 1; // leave some for the rest of the processes
     let now = Instant::now();
-    let width = 200;
-    let height = 100;
-    //TODO: check for better solution
+    let width = 640;
+    let height = 480;
+    // larger makes blur/shadows/antialias smoother
+    let smoothness: u32 = 100;
     // use one less thread for exact division
     // the last one will have less pixels to calculate
-    if height % cpu_num != 0 {
-        computing_threads = cpu_num - 1;
-    }
-    let thread_rows = height / computing_threads;
-    let antialiasing_sensitivity: u32 = 100;
+    let thread_rows = height / cpu_num + 1;
+    let lookfrom = Vector3::new(11.0, 4.0, 5.0);
+    let lookat = Vector3::new(0.0, 0.0, 0.0);
     let camera: &Camera = &Camera::new(
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(-2.0, -1.0, -1.0),
-        Vector3::new(4.0, 0.0, 0.0),
-        Vector3::new(0.0, 2.0, 0.0),
+        lookfrom,
+        lookat,
+        Vector3::new(0.0, 1.0, 0.0),
+        36.0,
+        width as f32 / height as f32,
+        0.1,
+        10.0,
     );
 
-    // TODO: check implementation performance (Box)
-    let world = &ObjectList::new(vec![
-        Box::new(Sphere::new(
-            Vector3::new(0.0, 0.0, -1.0),
-            0.5,
-            Material::new(
-                MaterialType::Lambertian,
-                Vector3::new(0.8, 0.3, 0.3),
-                0.0,
-                0.0,
-            ),
-        )),
-        Box::new(Sphere::new(
-            Vector3::new(0.0, -100.5, -1.0),
-            100.0,
-            Material::new(
-                MaterialType::Lambertian,
-                Vector3::new(0.8, 0.8, 0.0),
-                0.0,
-                0.0,
-            ),
-        )),
-        Box::new(Sphere::new(
-            Vector3::new(1.0, 0.0, -1.0),
-            0.5,
-            Material::new(MaterialType::Metal, Vector3::new(0.8, 0.6, 0.2), 0.3, 0.0),
-        )),
-        Box::new(Sphere::new(
-            Vector3::new(-1.0, 0.0, -1.0),
-            0.5,
-            Material::new(
-                MaterialType::Dielectric,
-                Vector3::new(1.0, 1.0, 1.0),
-                0.0,
-                1.5,
-            ),
-        )),
-    ]);
+    let world = &random_scene();
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
     let rows: Vec<&mut [Vector3]> = pixels.chunks_mut(thread_rows * width).collect();
+    let rows_length = rows.len();
 
     match crossbeam::scope(|spawner| {
         for (i, row) in rows.into_iter().enumerate() {
             spawner.spawn(move |_| {
-                for y in 0..thread_rows {
+                // when the height doesn't divide to the thread no
+                // the last row doesn't have the same number of
+                // pixels so limit max number of rows to remainder
+                let mut max_thread_rows = thread_rows;
+                if i == rows_length - 1 && height % thread_rows != 0 {
+                    max_thread_rows = height % thread_rows;
+                }
+
+                for y in 0..max_thread_rows {
                     for x in 0..width {
                         let mut col: Vector3 = Vector3::new(0.0, 0.0, 0.0);
                         // rows and y need to be calculated from bottom up
@@ -141,13 +214,13 @@ fn main() {
                         // this shoots rays around the object
                         // edge using a random offset
                         // and computes a color average
-                        for _ in 0..antialiasing_sensitivity {
+                        for _ in 0..smoothness {
                             let u = (x as f32 + rng.gen::<f32>()) / width as f32;
                             let v = (inverted_row + rng.gen::<f32>()) / height as f32;
                             let r = camera.get_ray(u, v);
                             col += color(&r, &world, 0);
                         }
-                        col /= antialiasing_sensitivity as f32;
+                        col /= smoothness as f32;
                         // remove the gamma of 2 from the color (raise to power of 1/2)
                         col = Vector3::new(col[0].sqrt(), col[1].sqrt(), col[2].sqrt());
                         let ir = (255.99 * &col[0]) as u8;
@@ -155,12 +228,6 @@ fn main() {
                         let ib = (255.99 * &col[2]) as u8;
                         // save buffer values
                         let buffer_pos = y * width + x;
-                        // when the height doesn't divide to the thread no
-                        // the last row doesn't have the same number of
-                        // pixels so check if we don't go over
-                        if buffer_pos >= row.len() {
-                            return;
-                        }
                         row[buffer_pos][0] = ir as f32;
                         row[buffer_pos][1] = ig as f32;
                         row[buffer_pos][2] = ib as f32;
