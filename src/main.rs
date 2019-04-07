@@ -8,6 +8,7 @@ use std::time::Instant;
 
 mod camera;
 mod material;
+mod moving_sphere;
 mod object;
 mod object_list;
 mod ray;
@@ -16,6 +17,7 @@ mod vector3;
 
 use camera::Camera;
 use material::{Material, MaterialType, Scatterable};
+use moving_sphere::MovingSphere;
 use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
@@ -48,8 +50,11 @@ fn random_scene() -> ObjectList {
             );
             if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    object_list.push(Box::new(Sphere::new(
+                    object_list.push(Box::new(MovingSphere::new(
                         center,
+                        center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
+                        0.0,
+                        1.0,
                         0.2,
                         Material::new(
                             MaterialType::Lambertian,
@@ -165,7 +170,7 @@ fn main() {
     let width = 640;
     let height = 480;
     // larger makes blur/shadows/antialias smoother
-    let smoothness: u32 = 100;
+    let smoothness: u32 = 10;
     // use one less thread for exact division
     // the last one will have less pixels to calculate
     let thread_rows = height / cpu_num + 1;
@@ -177,8 +182,10 @@ fn main() {
         Vector3::new(0.0, 1.0, 0.0),
         36.0,
         width as f32 / height as f32,
-        0.1,
+        0.0,
         10.0,
+        0.0,
+        1.0,
     );
 
     let world = &random_scene();
@@ -237,8 +244,9 @@ fn main() {
         }
     }) {
         Ok(()) => println!(
-            "Finished in {}s {}ms",
-            now.elapsed().as_secs(),
+            "Finished in {}m {}s {}ms",
+            (now.elapsed().as_secs() / 60) as u64,
+            now.elapsed().as_secs() % 60,
             (now.elapsed().subsec_nanos() / 1_000_000) as u64
         ),
         Err(err) => println!("{:?}", err),
