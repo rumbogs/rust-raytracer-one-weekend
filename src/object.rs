@@ -17,5 +17,5 @@ impl HitRecord {
 
 pub trait Hittable {
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)>;
-    fn bounding_box(t0: f32, t1: f32) -> Option<Aabb>;
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb>;
 }

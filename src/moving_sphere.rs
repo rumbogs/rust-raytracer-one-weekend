@@ -1,3 +1,4 @@
+use super::aabb::{surrounding_box, Aabb};
 use super::material::Material;
 use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
@@ -61,5 +62,9 @@ impl Hittable for MovingSphere {
             }
         }
         None
+    }
+
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {
+        Some(surrounding_box(Aabb::new(), Aabb::new()))
     }
 }

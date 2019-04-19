@@ -29,11 +29,23 @@ impl Hittable for Aabb {
         }
         true
     }
+
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {
+        None
+    }
 }
 
-fn surrounding_box(box0: Aabb, box1: Aabb) -> Aabb {
-    let small: Vector3 = Vector3::new(min(box0.min().x, box1.min().x), min(box0.min().y, box1.min().y), min(box0.min().z, box1.min().z));
-    let big: Vector3 = Vector3::new(max(box0.max().x, box1.max().x), max(box0.max().y, box1.max().y), max(box0.max().z, box1.max().z));
+pub fn surrounding_box(box0: Aabb, box1: Aabb) -> Aabb {
+    let small: Vector3 = Vector3::new(
+        box0.min.x().min(box1.min.x()),
+        box0.min.y().min(box1.min.y()),
+        box0.min.z().min(box1.min.z()),
+    );
+    let big: Vector3 = Vector3::new(
+        box0.max.x().max(box1.max.x()),
+        box0.max.y().max(box1.max.y()),
+        box0.max.z().max(box1.max.z()),
+    );
 
     Aabb::new(small, big)
 }

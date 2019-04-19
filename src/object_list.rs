@@ -1,4 +1,4 @@
-use super::aabb::Aabb;
+use super::aabb::{surrounding_box, Aabb};
 use super::material::Material;
 use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
@@ -44,7 +44,7 @@ impl Hittable for ObjectList {
 
     fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {
         if self.list.is_empty() {
-            None
+            return None;
         }
 
         let hit_bbox: Aabb;
@@ -55,13 +55,13 @@ impl Hittable for ObjectList {
                 for element in self.list.iter() {
                     match element.bounding_box(t0, t1) {
                         Some(bbox) => {
-                            hit_bbox = Aabb::surrounding_box(hit_bbox, bbox);
+                            hit_bbox = surrounding_box(hit_bbox, bbox);
                         }
-                        None => Some(hit_bbox),
+                        None => return Some(hit_bbox),
                     }
                 }
             }
-            None => None,
+            None => return None,
         }
 
         Some(hit_bbox)
