@@ -2,7 +2,6 @@ use super::aabb::Aabb;
 use super::material::Material;
 use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
-// use super::sphere::{Plane, Sphere};
 
 pub struct ObjectList {
     // this needs to be dynamic to allow for different
