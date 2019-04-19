@@ -6,6 +6,7 @@ extern crate rand;
 use rand::Rng;
 use std::time::Instant;
 
+mod aabb;
 mod camera;
 mod material;
 mod moving_sphere;
