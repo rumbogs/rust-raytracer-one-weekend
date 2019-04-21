@@ -47,7 +47,7 @@ impl Hittable for ObjectList {
             return None;
         }
 
-        let hit_bbox: Aabb;
+        let mut hit_bbox: Aabb;
 
         match self.list[0].bounding_box(t0, t1) {
             Some(first_bbox) => {

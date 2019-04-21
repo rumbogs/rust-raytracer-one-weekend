@@ -1,10 +1,12 @@
-use super::vector3::Vector3;
+use super::material::{Material, MaterialType};
 use super::object::{HitRecord, Hittable};
-use std::cmp::{min, max};
+use super::ray::Ray;
+use super::vector3::Vector3;
 
 pub struct Aabb {
-    min: Vector3,
-    max: Vector3,
+    pub min: Vector3,
+    pub max: Vector3,
+    material: Material,
 }
 
 impl Aabb {
@@ -12,22 +14,40 @@ impl Aabb {
         Aabb {
             min,
             max,
+            // default material to be returned by hit (keep return signature)
+            material: Material::new(
+                MaterialType::Lambertian,
+                Vector3::new(0.4, 0.2, 0.1),
+                0.0,
+                0.0,
+            ),
         }
     }
 }
 
 impl Hittable for Aabb {
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
+        let mut tmin;
+        let mut tmax;
         for a in 0..3 {
-            let t0: f32 = min((&self.min[a] - r.origin()[a]) / r.direction()[a],
-                                (&self.max[a] - r.origin()[a]) / r.direction()[a]);
-            let t1: f32 = max((&self.min[a] - r.origin()[a]) / r.direction()[a],
-                                (&self.max[a] - r.origin()[a]) / r.direction()[a]);
-            let tmin = max(t0, t_min);
-            let tmax = min(t1, t_max);
-            if (tmax <= tmin) false
+            let t0: f32 = ((&self.min[a] - r.origin()[a]) / r.direction()[a])
+                .min((&self.max[a] - r.origin()[a]) / r.direction()[a]);
+            let t1: f32 = ((&self.min[a] - r.origin()[a]) / r.direction()[a])
+                .max((&self.max[a] - r.origin()[a]) / r.direction()[a]);
+            tmin = t0.max(t_min);
+            tmax = t1.min(t_max);
+            if tmax <= tmin {
+                return None;
+            }
         }
-        true
+        Some((
+            HitRecord::new(
+                0.0,
+                Vector3::new(0.0, 0.0, 0.0),
+                Vector3::new(0.0, 0.0, 0.0),
+            ),
+            &self.material,
+        ))
     }
 
     fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {

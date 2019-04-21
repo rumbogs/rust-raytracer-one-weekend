@@ -65,6 +65,15 @@ impl Hittable for MovingSphere {
     }
 
     fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {
-        Some(surrounding_box(Aabb::new(), Aabb::new()))
+        Some(surrounding_box(
+            Aabb::new(
+                self.center0 - Vector3::new(self.radius, self.radius, self.radius),
+                self.center0 + Vector3::new(self.radius, self.radius, self.radius),
+            ),
+            Aabb::new(
+                self.center1 - Vector3::new(self.radius, self.radius, self.radius),
+                self.center1 + Vector3::new(self.radius, self.radius, self.radius),
+            ),
+        ))
     }
 }
