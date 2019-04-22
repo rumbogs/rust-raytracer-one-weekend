@@ -16,6 +16,7 @@ mod object_list;
 mod qsort;
 mod ray;
 mod sphere;
+mod texture;
 mod vector3;
 
 use camera::Camera;
@@ -25,6 +26,7 @@ use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
+use texture::{CheckerTexture, ConstantTexture};
 use vector3::{unit_vector, Vector3};
 
 fn random_scene() -> ObjectList {
@@ -37,7 +39,10 @@ fn random_scene() -> ObjectList {
         1000.0,
         Material::new(
             MaterialType::Lambertian,
-            Vector3::new(0.9, 0.9, 0.9),
+            Box::new(CheckerTexture::new(
+                Box::new(ConstantTexture::new(Vector3::new(0.2, 0.3, 0.1))),
+                Box::new(ConstantTexture::new(Vector3::new(0.9, 0.9, 0.9))),
+            )),
             0.0,
             0.0,
         ),
@@ -61,11 +66,11 @@ fn random_scene() -> ObjectList {
                         0.2,
                         Material::new(
                             MaterialType::Lambertian,
-                            Vector3::new(
+                            Box::new(ConstantTexture::new(Vector3::new(
                                 rng.gen::<f32>() * rng.gen::<f32>(),
                                 rng.gen::<f32>() * rng.gen::<f32>(),
                                 rng.gen::<f32>() * rng.gen::<f32>(),
-                            ),
+                            ))),
                             0.0,
                             0.0,
                         ),
@@ -76,11 +81,11 @@ fn random_scene() -> ObjectList {
                         0.2,
                         Material::new(
                             MaterialType::Metal,
-                            Vector3::new(
+                            Box::new(ConstantTexture::new(Vector3::new(
                                 0.5 * (1.0 + rng.gen::<f32>()),
                                 0.5 * (1.0 + rng.gen::<f32>()),
                                 0.5 * (1.0 + rng.gen::<f32>()),
-                            ),
+                            ))),
                             0.5 * rng.gen::<f32>(),
                             0.0,
                         ),
@@ -91,7 +96,7 @@ fn random_scene() -> ObjectList {
                         0.2,
                         Material::new(
                             MaterialType::Dielectric,
-                            Vector3::new(0.0, 0.0, 0.0),
+                            Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
                             0.0,
                             1.5,
                         ),
@@ -106,7 +111,7 @@ fn random_scene() -> ObjectList {
         1.0,
         Material::new(
             MaterialType::Dielectric,
-            Vector3::new(0.0, 0.0, 0.0),
+            Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
             0.0,
             1.5,
         ),
@@ -116,7 +121,7 @@ fn random_scene() -> ObjectList {
         1.0,
         Material::new(
             MaterialType::Lambertian,
-            Vector3::new(0.4, 0.2, 0.1),
+            Box::new(ConstantTexture::new(Vector3::new(0.4, 0.2, 0.1))),
             0.0,
             0.0,
         ),
@@ -124,7 +129,12 @@ fn random_scene() -> ObjectList {
     object_list.push(Box::new(Sphere::new(
         Vector3::new(4.0, 1.0, 0.0),
         1.0,
-        Material::new(MaterialType::Metal, Vector3::new(0.7, 0.6, 0.5), 0.0, 0.0),
+        Material::new(
+            MaterialType::Metal,
+            Box::new(ConstantTexture::new(Vector3::new(0.7, 0.6, 0.5))),
+            0.0,
+            0.0,
+        ),
     )));
 
     ObjectList::new(object_list)

@@ -1,6 +1,7 @@
 use super::material::{Material, MaterialType};
 use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
+use super::texture::ConstantTexture;
 use super::vector3::Vector3;
 
 #[derive(Clone)]
@@ -18,7 +19,7 @@ impl Aabb {
             // default material to be returned by hit (keep return signature)
             material: Material::new(
                 MaterialType::Lambertian,
-                Vector3::new(0.4, 0.2, 0.1),
+                Box::new(ConstantTexture::new(Vector3::new(0.4, 0.2, 0.1))),
                 0.0,
                 0.0,
             ),
