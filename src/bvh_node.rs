@@ -73,12 +73,13 @@ pub struct BvhNode {
 }
 
 impl BvhNode {
-    pub fn new(&self, mut objects: ObjectList, n: usize, time0: f32, time1: f32) -> Box<BvhNode> {
+    pub fn new(mut objects: ObjectList, time0: f32, time1: f32) -> Box<BvhNode> {
         let mut rng = rand::thread_rng();
         let left: Box<Hittable + Sync>;
         let right: Box<Hittable + Sync>;
         let axis: usize = 3 * (rng.gen::<f32>() as usize);
         let bbox: Aabb;
+        let n = objects.list.len();
 
         if axis == 0 {
             quick_sort(&mut objects.list, &box_x_compare);
@@ -89,14 +90,16 @@ impl BvhNode {
         }
 
         if n == 1 {
+            println!("n = 1");
             left = objects.list[0].clone();
             right = objects.list[0].clone();
         } else if n == 2 {
+            println!("n = 2");
             left = objects.list[0].clone();
             right = objects.list[1].clone();
         } else {
-            left = BvhNode::new(&self, objects.getSlice(0, n / 2), n / 2, time0, time1);
-            right = BvhNode::new(&self, objects.getSlice(n / 2, 100), n - n / 2, time0, time1);
+            left = BvhNode::new(objects.getSlice(0, n / 2), time0, time1);
+            right = BvhNode::new(objects.getSlice(n / 2, n), time0, time1);
         }
 
         let mut box_left: Aabb =

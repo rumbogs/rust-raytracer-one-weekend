@@ -19,6 +19,7 @@ mod sphere;
 mod texture;
 mod vector3;
 
+use bvh_node::BvhNode;
 use camera::Camera;
 use material::{Material, MaterialType, Scatterable};
 use moving_sphere::MovingSphere;
@@ -48,8 +49,8 @@ fn random_scene() -> ObjectList {
         ),
     )));
 
-    for a in -11..11 {
-        for b in -11..11 {
+    for a in -2..2 {
+        for b in -2..2 {
             let choose_mat: f32 = rng.gen::<f32>();
             let center: Vector3 = Vector3::new(
                 a as f32 + 0.9 * rng.gen::<f32>(),
@@ -201,6 +202,8 @@ fn main() {
         1.0,
     );
 
+    // TODO: why is this taking longer :(
+    // let world = &BvhNode::new(random_scene(), 0.0, 1.0);
     let world = &random_scene();
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
