@@ -1,3 +1,4 @@
+use super::aabb::{surrounding_box, Aabb};
 use super::material::Material;
 use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
@@ -38,6 +39,17 @@ impl MovingSphere {
 }
 
 impl Hittable for MovingSphere {
+    fn box_clone(&self) -> Box<dyn Hittable + Sync> {
+        Box::new(MovingSphere {
+            center0: self.center0.clone(),
+            center1: self.center1.clone(),
+            time0: self.time0,
+            time1: self.time1,
+            radius: self.radius,
+            material: self.material.clone(),
+        })
+    }
+
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         let oc: Vector3 = r.origin() - self.center(r.time);
         let a: f32 = dot(r.direction(), r.direction());
@@ -61,5 +73,18 @@ impl Hittable for MovingSphere {
             }
         }
         None
+    }
+
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {
+        Some(surrounding_box(
+            Aabb::new(
+                self.center0 - Vector3::new(self.radius, self.radius, self.radius),
+                self.center0 + Vector3::new(self.radius, self.radius, self.radius),
+            ),
+            Aabb::new(
+                self.center1 - Vector3::new(self.radius, self.radius, self.radius),
+                self.center1 + Vector3::new(self.radius, self.radius, self.radius),
+            ),
+        ))
     }
 }

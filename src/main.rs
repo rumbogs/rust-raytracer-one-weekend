@@ -7,11 +7,13 @@ use rand::Rng;
 use std::time::Instant;
 
 mod aabb;
+mod bvh_node;
 mod camera;
 mod material;
 mod moving_sphere;
 mod object;
 mod object_list;
+mod qsort;
 mod ray;
 mod sphere;
 mod vector3;
