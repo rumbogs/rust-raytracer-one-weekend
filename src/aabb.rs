@@ -3,6 +3,7 @@ use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
 use super::vector3::Vector3;
 
+#[derive(Clone)]
 pub struct Aabb {
     pub min: Vector3,
     pub max: Vector3,
@@ -26,6 +27,14 @@ impl Aabb {
 }
 
 impl Hittable for Aabb {
+    fn box_clone(&self) -> Box<dyn Hittable + Sync> {
+        Box::new(Aabb {
+            min: self.min.clone(),
+            max: self.max.clone(),
+            material: self.material.clone(),
+        })
+    }
+
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         let mut tmin;
         let mut tmax;

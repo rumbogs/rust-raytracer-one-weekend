@@ -8,7 +8,6 @@ use std::time::Instant;
 
 mod aabb;
 mod bvh_node;
-mod bvh_tree;
 mod camera;
 mod material;
 mod moving_sphere;
