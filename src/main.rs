@@ -37,7 +37,7 @@ fn random_scene() -> ObjectList {
         1000.0,
         Material::new(
             MaterialType::Lambertian,
-            Vector3::new(0.5, 0.5, 0.5),
+            Vector3::new(0.9, 0.9, 0.9),
             0.0,
             0.0,
         ),
