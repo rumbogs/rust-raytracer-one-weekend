@@ -3,7 +3,6 @@ use super::vector3::Vector3;
 pub trait Texture {
     fn box_clone(&self) -> Box<dyn Texture + Sync>;
     fn value(&self, u: f32, v: f32, p: &Vector3) -> Vector3;
-    fn getColor(&self) -> Vector3;
 }
 
 impl Clone for Box<dyn Texture + Sync> {
@@ -28,10 +27,6 @@ impl Texture for ConstantTexture {
     }
 
     fn value(&self, u: f32, v: f32, p: &Vector3) -> Vector3 {
-        self.color
-    }
-
-    fn getColor(&self) -> Vector3 {
         self.color
     }
 }
@@ -59,9 +54,5 @@ impl Texture for CheckerTexture {
         } else {
             self.even.value(u, v, p)
         }
-    }
-
-    fn getColor(&self) -> Vector3 {
-        self.odd.getColor()
     }
 }

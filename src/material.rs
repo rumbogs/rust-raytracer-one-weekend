@@ -59,16 +59,16 @@ impl Material {
 }
 
 pub trait Scatterable {
-    fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Box<dyn Texture + Sync>, Ray)>;
+    fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Vector3, Ray)>;
 }
 
 impl Scatterable for Material {
-    fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Box<dyn Texture + Sync>, Ray)> {
+    fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Vector3, Ray)> {
         match self.kind {
             MaterialType::Lambertian => {
                 let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
                 Some((
-                    self.albedo.clone(),
+                    self.albedo.value(0.0, 0.0, &rec.p),
                     Ray::new(rec.p, target - rec.p, r_in.time),
                 ))
             }
@@ -77,7 +77,7 @@ impl Scatterable for Material {
                 let scattered =
                     Ray::new(rec.p, reflected + self.fuzz * random_in_unit_sphere(), 0.0);
                 if dot(scattered.direction(), rec.normal) > 0.0 {
-                    Some((self.albedo.clone(), scattered))
+                    Some((self.albedo.value(0.0, 0.0, &rec.p), scattered))
                 } else {
                     None
                 }
@@ -86,7 +86,7 @@ impl Scatterable for Material {
                 let outward_normal: Vector3;
                 let reflected: Vector3 = reflect(r_in.direction(), rec.normal);
                 let ni_over_nt: f32;
-                let attenuation = Box::new(ConstantTexture::new(Vector3::new(1.0, 1.0, 1.0)));
+                let attenuation = Vector3::new(1.0, 1.0, 1.0);
                 let scattered: Ray;
                 let mut saved_refracted: Vector3 = Vector3::new(0.0, 0.0, 0.0);
                 let reflect_prob: f32;

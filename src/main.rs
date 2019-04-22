@@ -161,7 +161,7 @@ fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
             if depth < 50 {
                 match material.scatter(r, rec) {
                     Some((attenuation, scattered)) => {
-                        attenuation.getColor() * color(&scattered, world, depth + 1)
+                        attenuation * color(&scattered, world, depth + 1)
                     }
                     None => Vector3::new(0.0, 0.0, 0.0),
                 }
