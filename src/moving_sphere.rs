@@ -39,6 +39,16 @@ impl MovingSphere {
 }
 
 impl Hittable for MovingSphere {
+    fn box_clone(&self) -> Box<dyn Hittable + Sync> {
+        Box::new(MovingSphere {
+            center0: self.center0.clone(),
+            center1: self.center1.clone(),
+            time0: self.time0,
+            time1: self.time1,
+            radius: self.radius,
+            material: self.material.clone(),
+        })
+    }
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         let oc: Vector3 = r.origin() - self.center(r.time);
         let a: f32 = dot(r.direction(), r.direction());

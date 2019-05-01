@@ -66,6 +66,7 @@ fn box_z_compare(a: &Box<Hittable + Sync>, b: &Box<Hittable + Sync>) -> bool {
     box_left.min.z() - box_right.min.z() >= 0.0
 }
 
+#[derive(Clone)]
 pub struct BvhNode {
     bbox: Aabb,
     bvhs: Option<(Box<BvhNode>, Box<BvhNode>)>,
@@ -75,8 +76,8 @@ pub struct BvhNode {
 impl BvhNode {
     pub fn new(objects: &[Box<Hittable + Sync>], time0: f32, time1: f32) -> Box<BvhNode> {
         // let mut rng = rand::thread_rng();
-        let bvhs: Option<(Box<BvhNode>, Box<BvhNode>)> = None;
-        let roots: Option<(Box<Hittable + Sync>, Box<Hittable + Sync>)> = None;
+        let mut bvhs: Option<(Box<BvhNode>, Box<BvhNode>)> = None;
+        let mut roots: Option<(Box<Hittable + Sync>, Box<Hittable + Sync>)> = None;
 
         // let axis: usize = 3 * (rng.gen::<f32>() as usize);
         let bbox: Aabb;
@@ -92,10 +93,10 @@ impl BvhNode {
 
         if n == 1 {
             println!("n = 1");
-            roots = Some((objects[0], objects[0]));
+            roots = Some((objects[0].clone(), objects[0].clone()));
         } else if n == 2 {
             println!("n = 2");
-            roots = Some((objects[0], objects[1]));
+            roots = Some((objects[0].clone(), objects[1].clone()));
         } else {
             bvhs = Some((
                 BvhNode::new(&objects[0..n / 2], time0, time1),
@@ -107,7 +108,7 @@ impl BvhNode {
             Aabb::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 0.0));
         let mut box_right: Aabb =
             Aabb::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 0.0));
-        match roots {
+        match &roots {
             Some((left, right)) => {
                 match left.bounding_box(time0, time1) {
                     Some(bbox) => box_left = bbox,
@@ -123,7 +124,7 @@ impl BvhNode {
                 };
             }
             None => {
-                match bvhs {
+                match &bvhs {
                     Some((leftBvh, rightBvh)) => {
                         match leftBvh.bounding_box(time0, time1) {
                             Some(bbox) => box_left = bbox,
@@ -148,9 +149,16 @@ impl BvhNode {
 }
 
 impl Hittable for BvhNode {
+    fn box_clone(&self) -> Box<dyn Hittable + Sync> {
+        Box::new(BvhNode {
+            bbox: self.bbox.clone(),
+            roots: self.roots.clone(),
+            bvhs: self.bvhs.clone(),
+        })
+    }
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         match self.bbox.hit(r, t_min, t_max) {
-            Some((rec, mat)) => match self.roots {
+            Some((rec, mat)) => match &self.roots {
                 Some((left, right)) => match left.hit(r, t_min, t_max) {
                     Some((left_rec, left_mat)) => match right.hit(r, t_min, t_max) {
                         Some((right_rec, right_mat)) => {
@@ -167,7 +175,7 @@ impl Hittable for BvhNode {
                         None => None,
                     },
                 },
-                None => match self.bvhs {
+                None => match &self.bvhs {
                     Some((left, right)) => match left.hit(r, t_min, t_max) {
                         Some((left_rec, left_mat)) => match right.hit(r, t_min, t_max) {
                             Some((right_rec, right_mat)) => {

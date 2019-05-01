@@ -18,6 +18,13 @@ impl ObjectList {
 }
 
 impl Hittable for ObjectList {
+    fn box_clone(&self) -> Box<dyn Hittable + Sync> {
+        let mut list = vec![];
+        for element in self.list.iter() {
+            list.push(element.clone());
+        }
+        Box::new(ObjectList { list })
+    }
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         let mut closest_so_far: f32 = t_max;
         let mut hit_objects: Vec<(HitRecord, &Material)> = vec![];

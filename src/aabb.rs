@@ -28,6 +28,13 @@ impl Aabb {
 }
 
 impl Hittable for Aabb {
+    fn box_clone(&self) -> Box<dyn Hittable + Sync> {
+        Box::new(Aabb {
+            min: self.min.clone(),
+            max: self.max.clone(),
+            material: self.material.clone(),
+        })
+    }
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         let mut tmin;
         let mut tmax;

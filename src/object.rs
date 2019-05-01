@@ -9,6 +9,12 @@ pub struct HitRecord {
     pub normal: Vector3,
 }
 
+impl Clone for Box<Hittable + Sync> {
+    fn clone(&self) -> Box<Hittable + Sync> {
+        self.box_clone()
+    }
+}
+
 impl HitRecord {
     pub fn new(t: f32, p: Vector3, normal: Vector3) -> HitRecord {
         HitRecord { t, p, normal }
@@ -16,6 +22,7 @@ impl HitRecord {
 }
 
 pub trait Hittable {
+    fn box_clone(&self) -> Box<Hittable + Sync>;
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)>;
     fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb>;
 }

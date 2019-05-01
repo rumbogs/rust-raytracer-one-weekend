@@ -205,7 +205,7 @@ fn main() {
     let scene = random_scene();
 
     // TODO: why is this taking longer :(
-    let world = BvhNode::new(&scene.list[..], 0.0, 1.0);
+    let world = &BvhNode::new(&scene.list[..], 0.0, 1.0);
     // let world = &random_scene();
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
