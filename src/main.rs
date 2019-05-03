@@ -13,6 +13,7 @@ mod material;
 mod moving_sphere;
 mod object;
 mod object_list;
+mod perlin;
 mod qsort;
 mod ray;
 mod sphere;
@@ -27,7 +28,7 @@ use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
-use texture::{CheckerTexture, ConstantTexture};
+use texture::{CheckerTexture, ConstantTexture, NoiseTexture, Texture};
 use vector3::{unit_vector, Vector3};
 
 fn random_scene() -> ObjectList {
@@ -141,6 +142,24 @@ fn random_scene() -> ObjectList {
     ObjectList::new(object_list)
 }
 
+fn test_scene() -> ObjectList {
+    let mut object_list: Vec<Box<Hittable + Sync>> = Vec::with_capacity(2);
+    let noise_texture = NoiseTexture::new();
+    let noise_texture_box_clone = noise_texture.box_clone();
+    object_list.push(Box::new(Sphere::new(
+        Vector3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        Material::new(MaterialType::Lambertian, Box::new(noise_texture), 0.0, 0.0),
+    )));
+
+    object_list.push(Box::new(Sphere::new(
+        Vector3::new(0.0, 2.0, 0.0),
+        2.0,
+        Material::new(MaterialType::Lambertian, noise_texture_box_clone, 0.0, 0.0),
+    )));
+    ObjectList::new(object_list)
+}
+
 fn random_in_unit_sphere() -> Vector3 {
     let mut p: Vector3;
     loop {
@@ -202,7 +221,9 @@ fn main() {
         1.0,
     );
 
-    let scene = random_scene();
+    ///////////CREATE SCENE///////////
+    let scene = test_scene();
+    //////////////////////////////////
 
     // TODO: why is this taking longer :(
     let world = &BvhNode::new(&scene.list[..], 0.0, 1.0);
