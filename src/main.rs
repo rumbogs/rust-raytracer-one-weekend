@@ -2,6 +2,7 @@ extern crate crossbeam;
 extern crate image;
 extern crate num_cpus;
 extern crate rand;
+extern crate rand_xorshift;
 
 use rand::Rng;
 use std::time::Instant;
@@ -207,7 +208,7 @@ fn main() {
     // use one less thread for exact division
     // the last one will have less pixels to calculate
     let thread_rows = height / cpu_num + 1;
-    let lookfrom = Vector3::new(11.0, 4.0, 5.0);
+    let lookfrom = Vector3::new(11.0, 60.0, 5.0);
     let lookat = Vector3::new(0.0, 0.0, 0.0);
     let camera: &Camera = &Camera::new(
         lookfrom,
