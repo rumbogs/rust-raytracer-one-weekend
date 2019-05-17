@@ -208,13 +208,13 @@ fn main() {
     // use one less thread for exact division
     // the last one will have less pixels to calculate
     let thread_rows = height / cpu_num + 1;
-    let lookfrom = Vector3::new(11.0, 60.0, 5.0);
+    let lookfrom = Vector3::new(13.0, 2.0, 3.0);
     let lookat = Vector3::new(0.0, 0.0, 0.0);
     let camera: &Camera = &Camera::new(
         lookfrom,
         lookat,
         Vector3::new(0.0, 1.0, 0.0),
-        36.0,
+        20.0,
         width as f32 / height as f32,
         0.0,
         10.0,

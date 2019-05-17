@@ -68,7 +68,7 @@ impl NoiseTexture {
     pub fn new() -> Self {
         NoiseTexture {
             noise: Perlin::new(),
-            scale: 2.0,
+            scale: 1.0,
         }
     }
 }

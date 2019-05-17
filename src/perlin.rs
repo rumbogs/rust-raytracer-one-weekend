@@ -105,8 +105,8 @@ use super::vector3::{unit_vector, Vector3};
 //     }
 // }
 
-fn perlin_generate() -> [f32; 256] {
-    let mut p: [f32; 256] = [0.0; 256];
+fn perlin_generate() -> [f32; 1024] {
+    let mut p: [f32; 1024] = [0.0; 1024];
     let mut seed: [u8; 16] = [0; 16];
     let mut rng1 = rand::thread_rng();
     for i in 0..16 {
@@ -115,15 +115,19 @@ fn perlin_generate() -> [f32; 256] {
     println!("{:?}", seed);
     let mut rng: XorShiftRng = SeedableRng::from_seed(seed);
 
-    for i in 0..256 {
+    for i in 0..1024 {
         p[i] = rng.gen::<f32>();
     }
     p
 }
 
-fn permute(mut p: [usize; 256], n: usize) {
+fn permute(mut p: [usize; 1024], n: usize) {
     // let mut rng = rand::thread_rng();
-    let seed: [u8; 16] = [10; 16];
+    let mut seed: [u8; 16] = [0; 16];
+    let mut rng1 = rand::thread_rng();
+    for i in 0..16 {
+        seed[i] = rng1.gen_range(0, 255);
+    }
     let mut rng: XorShiftRng = SeedableRng::from_seed(seed);
 
     for i in (0..n - 1).rev() {
@@ -135,21 +139,21 @@ fn permute(mut p: [usize; 256], n: usize) {
     }
 }
 
-fn perlin_generate_perm() -> [usize; 256] {
-    let mut p: [usize; 256] = [0; 256];
-    for i in 0..256 {
+fn perlin_generate_perm() -> [usize; 1024] {
+    let mut p: [usize; 1024] = [0; 1024];
+    for i in 0..1024 {
         p[i] = i;
     }
-    permute(p, 256);
+    permute(p, 1024);
     p
 }
 
 #[derive(Clone)]
 pub struct Perlin {
-    ranfloat: [f32; 256],
-    perm_x: [usize; 256],
-    perm_y: [usize; 256],
-    perm_z: [usize; 256],
+    ranfloat: [f32; 1024],
+    perm_x: [usize; 1024],
+    perm_y: [usize; 1024],
+    perm_z: [usize; 1024],
 }
 
 impl Perlin {
@@ -166,9 +170,10 @@ impl Perlin {
         let mut u: f32 = p.x() - p.x().floor();
         let mut v: f32 = p.y() - p.y().floor();
         let mut w: f32 = p.z() - p.z().floor();
-        let i: isize = (4.0 * p.x().floor()) as isize & 255;
-        let j: isize = (4.0 * p.y().floor()) as isize & 255;
-        let k: isize = (4.0 * p.z().floor()) as isize & 255;
+        let mut rng1 = rand::thread_rng();
+        let i: isize = (4.0 * (p.x() + 10.0)) as isize & 1023;
+        let j: isize = (4.0 * (p.y() + 0.0)) as isize & 1023;
+        let k: isize = (4.0 * (p.z() + 0.0)) as isize & 1023;
         self.ranfloat[self.perm_x[i as usize] ^ self.perm_y[j as usize] ^ self.perm_z[k as usize]]
     }
 }
