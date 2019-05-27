@@ -1,4 +1,4 @@
-use super::perlin::Perlin;
+use noise::{NoiseFn, Perlin, Turbulence};
 use super::vector3::Vector3;
 
 pub trait Texture {
@@ -58,17 +58,39 @@ impl Texture for CheckerTexture {
     }
 }
 
+fn turb(p: &Vector3, noise: &Perlin, scale: f64, depth: Option<isize>) -> f64 {
+    let mut accum: f64 = 0.0;
+    let mut temp_p: Vector3 = *p;
+    let mut weight: f64 = 1.0;
+    let depth = match depth {
+        Some(val) => val,
+        None => 7
+    };
+    
+    for i in 0..depth {
+        accum += weight * noise.get([scale * p.x() as f64, scale * p.y() as f64, scale * p.z() as f64]);
+        weight *= 0.5;
+        temp_p *= 2.0;
+    }
+    let absolute_val = accum.abs();
+    if absolute_val > 1.0 {
+        1.0
+    } else {
+        absolute_val
+    }
+}
+
 #[derive(Clone)]
 pub struct NoiseTexture {
     noise: Perlin,
-    scale: f32,
+    scale: f64,
 }
 
 impl NoiseTexture {
     pub fn new() -> Self {
         NoiseTexture {
             noise: Perlin::new(),
-            scale: 1.0,
+            scale: 4.0,
         }
     }
 }
@@ -79,6 +101,11 @@ impl Texture for NoiseTexture {
     }
 
     fn value(&self, u: f32, v: f32, p: &Vector3) -> Vector3 {
-        Vector3::new(1.0, 1.0, 1.0) * self.noise.noise(self.scale * *p)
+        let point_value = [self.scale * p.x() as f64, self.scale * p.y() as f64, self.scale * p.z() as f64];
+        let noise_value = self.noise.get(point_value);
+        // let turbulence = Turbulence::new(&self.noise);
+        // let turbulence_value = turbulence.get(point_value);
+        // let turbulence_value = turb(p, &self.noise, self.scale, None);
+        Vector3::new(1.0, 1.0, 1.0) * 0.5 * (1.0 + (10.0 * turbulence_value as f32) + self.scale as f32 * p.z())
     }
 }

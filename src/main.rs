@@ -2,7 +2,7 @@ extern crate crossbeam;
 extern crate image;
 extern crate num_cpus;
 extern crate rand;
-extern crate rand_xorshift;
+extern crate noise;
 
 use rand::Rng;
 use std::time::Instant;
@@ -14,7 +14,6 @@ mod material;
 mod moving_sphere;
 mod object;
 mod object_list;
-mod perlin;
 mod qsort;
 mod ray;
 mod sphere;
@@ -150,7 +149,12 @@ fn test_scene() -> ObjectList {
     object_list.push(Box::new(Sphere::new(
         Vector3::new(0.0, -1000.0, 0.0),
         1000.0,
-        Material::new(MaterialType::Lambertian, Box::new(noise_texture), 0.0, 0.0),
+        Material::new(
+            MaterialType::Lambertian,
+            Box::new(ConstantTexture::new(Vector3::new(0.4, 0.2, 0.1))),
+            0.0,
+            0.0,
+        ),
     )));
 
     object_list.push(Box::new(Sphere::new(
@@ -278,7 +282,9 @@ fn main() {
                         row[buffer_pos][0] = ir as f32;
                         row[buffer_pos][1] = ig as f32;
                         row[buffer_pos][2] = ib as f32;
+
                     }
+                    println!("\r{:?}/{:?}", y, max_thread_rows);
                 }
             });
         }
