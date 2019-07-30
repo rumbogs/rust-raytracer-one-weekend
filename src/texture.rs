@@ -1,3 +1,4 @@
+use super::noise::Perlin;
 use super::vector3::Vector3;
 
 pub trait Texture {
@@ -54,5 +55,28 @@ impl Texture for CheckerTexture {
         } else {
             self.even.value(u, v, p)
         }
+    }
+}
+
+pub struct NoiseTexture {
+    noise: Perlin,
+}
+
+impl NoiseTexture {
+    pub fn new() -> NoiseTexture {
+        NoiseTexture {
+            noise: Perlin::new(),
+        }
+    }
+}
+
+impl Texture for NoiseTexture {
+    fn box_clone(&self) -> Box<dyn Texture + Sync> {
+        Box::new(NoiseTexture::new())
+    }
+
+    fn value(&self, u: f32, v: f32, p: &Vector3) -> Vector3 {
+        let noise_value: f32 = self.noise.noise(&p);
+        Vector3::new(1.0, 1.0, 1.0) * noise_value
     }
 }

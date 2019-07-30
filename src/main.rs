@@ -11,6 +11,7 @@ mod bvh_node;
 mod camera;
 mod material;
 mod moving_sphere;
+mod noise;
 mod object;
 mod object_list;
 mod qsort;
@@ -27,7 +28,7 @@ use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
-use texture::{CheckerTexture, ConstantTexture};
+use texture::{CheckerTexture, ConstantTexture, NoiseTexture};
 use vector3::{unit_vector, Vector3};
 
 fn random_scene() -> ObjectList {
@@ -40,103 +41,100 @@ fn random_scene() -> ObjectList {
         1000.0,
         Material::new(
             MaterialType::Lambertian,
-            Box::new(CheckerTexture::new(
-                Box::new(ConstantTexture::new(Vector3::new(0.2, 0.3, 0.1))),
-                Box::new(ConstantTexture::new(Vector3::new(0.9, 0.9, 0.9))),
-            )),
+            Box::new(NoiseTexture::new()),
             0.0,
             0.0,
         ),
     )));
 
-    for a in -2..2 {
-        for b in -2..2 {
-            let choose_mat: f32 = rng.gen::<f32>();
-            let center: Vector3 = Vector3::new(
-                a as f32 + 0.9 * rng.gen::<f32>(),
-                0.2,
-                b as f32 + 0.9 * rng.gen::<f32>(),
-            );
-            if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                if choose_mat < 0.8 {
-                    object_list.push(Box::new(MovingSphere::new(
-                        center,
-                        center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
-                        0.0,
-                        1.0,
-                        0.2,
-                        Material::new(
-                            MaterialType::Lambertian,
-                            Box::new(ConstantTexture::new(Vector3::new(
-                                rng.gen::<f32>() * rng.gen::<f32>(),
-                                rng.gen::<f32>() * rng.gen::<f32>(),
-                                rng.gen::<f32>() * rng.gen::<f32>(),
-                            ))),
-                            0.0,
-                            0.0,
-                        ),
-                    )));
-                } else if choose_mat < 0.95 {
-                    object_list.push(Box::new(Sphere::new(
-                        center,
-                        0.2,
-                        Material::new(
-                            MaterialType::Metal,
-                            Box::new(ConstantTexture::new(Vector3::new(
-                                0.5 * (1.0 + rng.gen::<f32>()),
-                                0.5 * (1.0 + rng.gen::<f32>()),
-                                0.5 * (1.0 + rng.gen::<f32>()),
-                            ))),
-                            0.5 * rng.gen::<f32>(),
-                            0.0,
-                        ),
-                    )));
-                } else {
-                    object_list.push(Box::new(Sphere::new(
-                        center,
-                        0.2,
-                        Material::new(
-                            MaterialType::Dielectric,
-                            Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
-                            0.0,
-                            1.5,
-                        ),
-                    )));
-                }
-            }
-        }
-    }
+    // for a in -2..2 {
+    //     for b in -2..2 {
+    //         let choose_mat: f32 = rng.gen::<f32>();
+    //         let center: Vector3 = Vector3::new(
+    //             a as f32 + 0.9 * rng.gen::<f32>(),
+    //             0.2,
+    //             b as f32 + 0.9 * rng.gen::<f32>(),
+    //         );
+    //         if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+    //             if choose_mat < 0.8 {
+    //                 object_list.push(Box::new(MovingSphere::new(
+    //                     center,
+    //                     center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
+    //                     0.0,
+    //                     1.0,
+    //                     0.2,
+    //                     Material::new(
+    //                         MaterialType::Lambertian,
+    //                         Box::new(ConstantTexture::new(Vector3::new(
+    //                             rng.gen::<f32>() * rng.gen::<f32>(),
+    //                             rng.gen::<f32>() * rng.gen::<f32>(),
+    //                             rng.gen::<f32>() * rng.gen::<f32>(),
+    //                         ))),
+    //                         0.0,
+    //                         0.0,
+    //                     ),
+    //                 )));
+    //             } else if choose_mat < 0.95 {
+    //                 object_list.push(Box::new(Sphere::new(
+    //                     center,
+    //                     0.2,
+    //                     Material::new(
+    //                         MaterialType::Metal,
+    //                         Box::new(ConstantTexture::new(Vector3::new(
+    //                             0.5 * (1.0 + rng.gen::<f32>()),
+    //                             0.5 * (1.0 + rng.gen::<f32>()),
+    //                             0.5 * (1.0 + rng.gen::<f32>()),
+    //                         ))),
+    //                         0.5 * rng.gen::<f32>(),
+    //                         0.0,
+    //                     ),
+    //                 )));
+    //             } else {
+    //                 object_list.push(Box::new(Sphere::new(
+    //                     center,
+    //                     0.2,
+    //                     Material::new(
+    //                         MaterialType::Dielectric,
+    //                         Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
+    //                         0.0,
+    //                         1.5,
+    //                     ),
+    //                 )));
+    //             }
+    //         }
+    //     }
+    // }
 
+    // object_list.push(Box::new(Sphere::new(
+    //     Vector3::new(0.0, 1.0, 0.0),
+    //     1.0,
+    //     Material::new(
+    //         MaterialType::Dielectric,
+    //         Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
+    //         0.0,
+    //         1.5,
+    //     ),
+    // )));
     object_list.push(Box::new(Sphere::new(
         Vector3::new(0.0, 1.0, 0.0),
         1.0,
         Material::new(
-            MaterialType::Dielectric,
-            Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
-            0.0,
-            1.5,
-        ),
-    )));
-    object_list.push(Box::new(Sphere::new(
-        Vector3::new(-4.0, 1.0, 0.0),
-        1.0,
-        Material::new(
             MaterialType::Lambertian,
-            Box::new(ConstantTexture::new(Vector3::new(0.4, 0.2, 0.1))),
+            Box::new(NoiseTexture::new()),
             0.0,
             0.0,
         ),
     )));
-    object_list.push(Box::new(Sphere::new(
-        Vector3::new(4.0, 1.0, 0.0),
-        1.0,
-        Material::new(
-            MaterialType::Metal,
-            Box::new(ConstantTexture::new(Vector3::new(0.7, 0.6, 0.5))),
-            0.0,
-            0.0,
-        ),
-    )));
+    // object_list.push(Box::new(Sphere::new(
+    //     Vector3::new(4.0, 1.0, 0.0),
+    //     1.0,
+    //     Material::new(
+    //         MaterialType::Metal,
+    //         Box::new(ConstantTexture::new(Vector3::new(0.7, 0.6, 0.5))),
+    //         0.0,
+    //         0.0,
+    //     ),
+    // )));
 
     ObjectList::new(object_list)
 }
