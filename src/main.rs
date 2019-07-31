@@ -20,21 +20,21 @@ mod sphere;
 mod texture;
 mod vector3;
 
-use bvh_node::BvhNode;
+// use bvh_node::BvhNode;
 use camera::Camera;
 use material::{Material, MaterialType, Scatterable};
-use moving_sphere::MovingSphere;
+// use moving_sphere::MovingSphere;
 use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
-use texture::{CheckerTexture, ConstantTexture, NoiseTexture};
+use texture::NoiseTexture;
 use vector3::{unit_vector, Vector3};
 
 fn random_scene() -> ObjectList {
     let n: usize = 500;
     let mut object_list: Vec<Box<Hittable + Sync>> = Vec::with_capacity(n + 1);
-    let mut rng = rand::thread_rng();
+    // let mut rng = rand::thread_rng();
 
     object_list.push(Box::new(Sphere::new(
         Vector3::new(0.0, -1000.0, 0.0),
