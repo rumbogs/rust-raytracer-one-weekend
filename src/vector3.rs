@@ -110,6 +110,14 @@ impl Mul<Vector3> for f32 {
   }
 }
 
+impl Mul<&Vector3> for f32 {
+  type Output = Vector3;
+
+  fn mul(self, other: &Vector3) -> Vector3 {
+    Vector3::new(self * other.e[0], self * other.e[1], self * other.e[2])
+  }
+}
+
 impl Div<f32> for Vector3 {
   type Output = Vector3;
 

@@ -60,22 +60,28 @@ impl Texture for CheckerTexture {
 
 pub struct NoiseTexture {
     noise: Perlin,
+    scale: f32,
 }
 
 impl NoiseTexture {
-    pub fn new() -> NoiseTexture {
+    pub fn new(scale: f32) -> NoiseTexture {
         NoiseTexture {
             noise: Perlin::new(),
+            scale,
         }
     }
 }
 
 impl Texture for NoiseTexture {
     fn box_clone(&self) -> Box<dyn Texture + Sync> {
-        Box::new(NoiseTexture::new())
+        Box::new(NoiseTexture::new(self.scale))
     }
 
     fn value(&self, u: f32, v: f32, p: &Vector3) -> Vector3 {
-        Vector3::new(1.0, 1.0, 1.0) * self.noise.noise(&p)
+        // Vector3::new(1.0, 1.0, 1.0) * 0.5 * (1.0 + self.noise.turb(&(self.scale * p), None))
+        // Vector3::new(1.0, 1.0, 1.0) * self.noise.turb(&(self.scale * p), None)
+        Vector3::new(1.0, 1.0, 1.0)
+            * 0.5
+            * (1.0 + (self.scale * p.z() + 10.0 * self.noise.turb(&(self.scale * p), None)).sin())
     }
 }

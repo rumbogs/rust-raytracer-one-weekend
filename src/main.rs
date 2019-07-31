@@ -41,7 +41,7 @@ fn random_scene() -> ObjectList {
         1000.0,
         Material::new(
             MaterialType::Lambertian,
-            Box::new(NoiseTexture::new()),
+            Box::new(NoiseTexture::new(5.0)),
             0.0,
             0.0,
         ),
@@ -120,7 +120,7 @@ fn random_scene() -> ObjectList {
         1.0,
         Material::new(
             MaterialType::Lambertian,
-            Box::new(NoiseTexture::new()),
+            Box::new(NoiseTexture::new(5.0)),
             0.0,
             0.0,
         ),
