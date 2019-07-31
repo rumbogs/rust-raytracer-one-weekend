@@ -1,5 +1,5 @@
 use super::vector3::Vector3;
-use rand::{Rng, SeedableRng};
+use rand::Rng;
 
 fn perlin_generate() -> [f32; 256] {
     let mut p: [f32; 256] = [0.0; 256];
@@ -10,9 +10,9 @@ fn perlin_generate() -> [f32; 256] {
     p
 }
 
-fn permute(mut p: [usize; 256]) {
+fn permute(p: &mut [usize; 256]) {
     let mut rng = rand::thread_rng();
-    for i in 0..256 {
+    for i in (0..256).rev() {
         let target: usize = (rng.gen::<f32>() * (i + 1) as f32) as usize;
         let tmp: usize = p[i];
         p[i] = p[target];
@@ -25,7 +25,7 @@ fn perlin_generate_perm() -> [usize; 256] {
     for i in 0..256 {
         p[i] = i;
     }
-    permute(p);
+    permute(&mut p);
     p
 }
 
@@ -50,9 +50,9 @@ impl Perlin {
         let u: f32 = p.x() - p.x().floor();
         let v: f32 = p.y() - p.y().floor();
         let w: f32 = p.z() - p.z().floor();
-        let i: usize = (4.0 * p.x()) as usize & 255;
-        let j: usize = (4.0 * p.y()) as usize & 255;
-        let k: usize = (4.0 * p.z()) as usize & 255;
-        self.ranfloat[self.perm_x[i] ^ self.perm_y[j] ^ self.perm_z[k]]
+        let i: isize = (4.0 * p.x()) as isize & 255;
+        let j: isize = (4.0 * p.y()) as isize & 255;
+        let k: isize = (4.0 * p.z()) as isize & 255;
+        self.ranfloat[self.perm_x[i as usize] ^ self.perm_y[j as usize] ^ self.perm_z[k as usize]]
     }
 }

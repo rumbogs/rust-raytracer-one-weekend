@@ -98,8 +98,8 @@ impl BvhNode {
             left = objects.list[0].clone();
             right = objects.list[1].clone();
         } else {
-            left = BvhNode::new(objects.getSlice(0, n / 2), time0, time1);
-            right = BvhNode::new(objects.getSlice(n / 2, n), time0, time1);
+            left = BvhNode::new(objects.get_slice(0, n / 2), time0, time1);
+            right = BvhNode::new(objects.get_slice(n / 2, n), time0, time1);
         }
 
         let mut box_left: Aabb =

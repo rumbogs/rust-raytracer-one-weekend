@@ -22,7 +22,7 @@ impl ObjectList {
         ObjectList { list }
     }
 
-    pub fn getSlice(&self, start_index: usize, end_index: usize) -> ObjectList {
+    pub fn get_slice(&self, start_index: usize, end_index: usize) -> ObjectList {
         let mut list = vec![];
         for i in start_index..end_index {
             list.push(self.list[i].clone());

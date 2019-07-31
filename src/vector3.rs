@@ -190,6 +190,12 @@ impl DivAssign<f32> for Vector3 {
   }
 }
 
+impl std::fmt::Display for Vector3 {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "(x: {}, y: {}, z: {})", self.e[0], self.e[1], self.e[2])
+  }
+}
+
 pub fn dot(v1: Vector3, v2: Vector3) -> f32 {
   v1.e[0] * v2.e[0] + v1.e[1] * v2.e[1] + v1.e[2] * v2.e[2]
 }

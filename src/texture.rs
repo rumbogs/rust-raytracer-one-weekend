@@ -1,4 +1,4 @@
-use super::noise::Perlin;
+use super::perlin::Perlin;
 use super::vector3::Vector3;
 
 pub trait Texture {
@@ -76,7 +76,6 @@ impl Texture for NoiseTexture {
     }
 
     fn value(&self, u: f32, v: f32, p: &Vector3) -> Vector3 {
-        let noise_value: f32 = self.noise.noise(&p);
-        Vector3::new(1.0, 1.0, 1.0) * noise_value
+        Vector3::new(1.0, 1.0, 1.0) * self.noise.noise(&p)
     }
 }
