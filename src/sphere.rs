@@ -1,4 +1,3 @@
-use super::aabb::Aabb;
 use super::material::Material;
 use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
@@ -52,12 +51,5 @@ impl Hittable for Sphere {
             }
         }
         None
-    }
-
-    fn bounding_box(&self, _t0: f32, _t1: f32) -> Option<Aabb> {
-        Some(Aabb::new(
-            self.center - Vector3::new(self.radius, self.radius, self.radius),
-            self.center + Vector3::new(self.radius, self.radius, self.radius),
-        ))
     }
 }
