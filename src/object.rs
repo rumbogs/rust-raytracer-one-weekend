@@ -15,6 +15,5 @@ impl HitRecord {
 }
 
 pub trait Hittable {
-    fn box_clone(&self) -> Box<dyn Hittable + Sync>;
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)>;
 }

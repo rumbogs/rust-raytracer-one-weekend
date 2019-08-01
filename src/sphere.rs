@@ -20,14 +20,6 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn box_clone(&self) -> Box<dyn Hittable + Sync> {
-        Box::new(Sphere {
-            center: self.center.clone(),
-            radius: self.radius,
-            material: self.material.clone(),
-        })
-    }
-
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         let oc: Vector3 = r.origin() - self.center;
         let a: f32 = dot(r.direction(), r.direction());
