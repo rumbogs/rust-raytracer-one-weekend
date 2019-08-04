@@ -20,7 +20,7 @@ mod sphere;
 mod texture;
 mod vector3;
 
-// use bvh_node::BvhNode;
+use bvh_node::{createTree, BvhTree};
 use camera::Camera;
 use material::{Material, MaterialType, Scatterable};
 // use moving_sphere::MovingSphere;
@@ -152,7 +152,7 @@ fn random_in_unit_sphere() -> Vector3 {
     p
 }
 
-fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
+fn color(r: &Ray, world: &BvhTree, depth: usize) -> Vector3 {
     // some of the rays hit at 0.00000001 instead of 0.0
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
@@ -201,8 +201,9 @@ fn main() {
     );
 
     // TODO: why is this taking longer :(
-    // let world = &BvhNode::new(random_scene(), 0.0, 1.0);
-    let world = &random_scene();
+    let scene = random_scene();
+    let world = BvhTree::new(&scene.list.as_slice(), 0.0, 1.0);
+    // let world = &random_scene();
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
     let rows: Vec<&mut [Vector3]> = pixels.chunks_mut(thread_rows * width).collect();

@@ -1,6 +1,7 @@
 use super::material::Material;
 use super::ray::Ray;
 use super::vector3::Vector3;
+use super::aabb::Aabb;
 
 pub struct HitRecord {
     pub t: f32,
@@ -16,4 +17,5 @@ impl HitRecord {
 
 pub trait Hittable {
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)>;
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb>;
 }

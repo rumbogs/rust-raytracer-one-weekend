@@ -3,6 +3,7 @@ use super::material::Material;
 use super::object::{HitRecord, Hittable};
 use super::ray::Ray;
 use super::vector3::{dot, Vector3};
+use super::aabb::{Aabb, surrounding_box};
 
 pub struct MovingSphere {
     center0: Vector3,
@@ -62,5 +63,17 @@ impl Hittable for MovingSphere {
             }
         }
         None
+    }
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {
+        Some(surrounding_box(
+            &Aabb::new(
+                self.center0 - Vector3::new(self.radius, self.radius, self.radius),
+                self.center0 + Vector3::new(self.radius, self.radius, self.radius),
+            ),
+            &Aabb::new(
+                self.center1 - Vector3::new(self.radius, self.radius, self.radius),
+                self.center1 + Vector3::new(self.radius, self.radius, self.radius),
+            ),
+        ))
     }
 }
