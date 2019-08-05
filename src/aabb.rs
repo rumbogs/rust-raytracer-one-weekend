@@ -4,11 +4,10 @@ use super::ray::Ray;
 use super::texture::ConstantTexture;
 use super::vector3::Vector3;
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Aabb {
     pub min: Vector3,
     pub max: Vector3,
-    material: Material,
 }
 
 impl Aabb {
@@ -16,19 +15,10 @@ impl Aabb {
         Aabb {
             min,
             max,
-            // default material to be returned by the hit function (to keep function signature)
-            material: Material::new(
-                MaterialType::Lambertian,
-                Box::new(ConstantTexture::new(Vector3::new(0.4, 0.2, 0.1))),
-                0.0,
-                0.0,
-            ),
         }
     }
-}
 
-impl Hittable for Aabb {
-    fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
+    pub fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> bool {
         for a in 0..3 {
             let tmin;
             let tmax;
@@ -39,21 +29,10 @@ impl Hittable for Aabb {
             tmin = t0.max(t_min);
             tmax = t1.min(t_max);
             if tmax <= tmin {
-                return None;
+                return false;
             }
         }
-        Some((
-            HitRecord::new(
-                0.0,
-                Vector3::new(0.0, 0.0, 0.0),
-                Vector3::new(0.0, 0.0, 0.0),
-            ),
-            &self.material,
-        ))
-    }
-
-    fn bounding_box(&self, t0: f32, t1: f32) -> Option<Aabb> {
-        None
+        return true
     }
 }
 

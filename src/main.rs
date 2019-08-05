@@ -20,18 +20,18 @@ mod sphere;
 mod texture;
 mod vector3;
 
-use bvh_node::{createTree, BvhTree};
+use bvh_node::BvhTree;
 use camera::Camera;
 use material::{Material, MaterialType, Scatterable};
-// use moving_sphere::MovingSphere;
+use moving_sphere::MovingSphere;
 use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
-use texture::NoiseTexture;
+use texture::{ConstantTexture, NoiseTexture};
 use vector3::{unit_vector, Vector3};
 
-fn random_scene() -> ObjectList {
+fn random_scene() -> Vec<Box<Hittable + Sync>> {
     let n: usize = 500;
     let mut object_list: Vec<Box<Hittable + Sync>> = Vec::with_capacity(n + 1);
     // let mut rng = rand::thread_rng();
@@ -41,7 +41,7 @@ fn random_scene() -> ObjectList {
         1000.0,
         Material::new(
             MaterialType::Lambertian,
-            Box::new(NoiseTexture::new(5.0)),
+            Box::new(ConstantTexture::new(Vector3::new(0.7, 0.6, 0.5))),
             0.0,
             0.0,
         ),
@@ -136,7 +136,72 @@ fn random_scene() -> ObjectList {
     //     ),
     // )));
 
-    ObjectList::new(object_list)
+    object_list
+}
+
+fn random_scene2() -> Vec<Box<Hittable + Sync>> {
+    let n: usize = 500;
+    let mut object_list: Vec<Box<Hittable + Sync>> = Vec::with_capacity(n + 1);
+    let mut rng = rand::thread_rng();
+
+    for a in -2..2 {
+        for b in -2..2 {
+            let choose_mat: f32 = rng.gen::<f32>();
+            let center: Vector3 = Vector3::new(
+                a as f32 + 0.9 * rng.gen::<f32>(),
+                0.2,
+                b as f32 + 0.9 * rng.gen::<f32>(),
+            );
+            if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+                if choose_mat < 0.8 {
+                    object_list.push(Box::new(MovingSphere::new(
+                        center,
+                        center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
+                        0.0,
+                        1.0,
+                        0.2,
+                        Material::new(
+                            MaterialType::Lambertian,
+                            Box::new(ConstantTexture::new(Vector3::new(
+                                rng.gen::<f32>() * rng.gen::<f32>(),
+                                rng.gen::<f32>() * rng.gen::<f32>(),
+                                rng.gen::<f32>() * rng.gen::<f32>(),
+                            ))),
+                            0.0,
+                            0.0,
+                        ),
+                    )));
+                } else if choose_mat < 0.95 {
+                    object_list.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Material::new(
+                            MaterialType::Metal,
+                            Box::new(ConstantTexture::new(Vector3::new(
+                                0.5 * (1.0 + rng.gen::<f32>()),
+                                0.5 * (1.0 + rng.gen::<f32>()),
+                                0.5 * (1.0 + rng.gen::<f32>()),
+                            ))),
+                            0.5 * rng.gen::<f32>(),
+                            0.0,
+                        ),
+                    )));
+                } else {
+                    object_list.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Material::new(
+                            MaterialType::Dielectric,
+                            Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
+                            0.0,
+                            1.5,
+                        ),
+                    )));
+                }
+            }
+        }
+    }
+    object_list
 }
 
 fn random_in_unit_sphere() -> Vector3 {
@@ -152,7 +217,7 @@ fn random_in_unit_sphere() -> Vector3 {
     p
 }
 
-fn color(r: &Ray, world: &BvhTree, depth: usize) -> Vector3 {
+fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
     // some of the rays hit at 0.00000001 instead of 0.0
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
@@ -201,9 +266,19 @@ fn main() {
     );
 
     // TODO: why is this taking longer :(
-    let scene = random_scene();
-    let world = BvhTree::new(&scene.list.as_slice(), 0.0, 1.0);
-    // let world = &random_scene();
+    let mut scene = random_scene();
+    let mut balls = random_scene2();
+    // let mut test: Vec<Box<Hittable + Sync>> = vec![Box::new(BvhTree::new(balls, 0.0, 1.0))];
+    for el in balls {
+        scene.push(el);
+    }
+    // for ball in balls {
+    //     scene.push(ball)
+    // }
+    // scene.push(Box::new(BvhTree::new(balls, 0.0, 1.0)));
+    // let world = &ObjectList::new(vec![Box::new(BvhTree::new(scene, 0.0, 1.0))]);
+    // let world = BvhTree::new(&scene.list.as_slice(), 0.0, 1.0);
+    let world = &ObjectList::new(scene);
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
     let rows: Vec<&mut [Vector3]> = pixels.chunks_mut(thread_rows * width).collect();
