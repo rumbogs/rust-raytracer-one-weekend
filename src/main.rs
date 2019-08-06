@@ -14,7 +14,6 @@ mod moving_sphere;
 mod object;
 mod object_list;
 mod perlin;
-mod qsort;
 mod ray;
 mod sphere;
 mod texture;
@@ -22,130 +21,45 @@ mod vector3;
 
 use bvh_node::BvhTree;
 use camera::Camera;
-use material::{Material, MaterialType, Scatterable};
+use material::{Material};
 use moving_sphere::MovingSphere;
 use object::Hittable;
 use object_list::ObjectList;
 use ray::Ray;
 use sphere::Sphere;
-use texture::{ConstantTexture, NoiseTexture};
+use texture::{Texture};
 use vector3::{unit_vector, Vector3};
+use perlin::{Perlin};
 
-fn random_scene() -> Vec<Box<Hittable + Sync>> {
+fn random_scene() -> Vec<Box<Hittable>> {
     let n: usize = 500;
-    let mut object_list: Vec<Box<Hittable + Sync>> = Vec::with_capacity(n + 1);
-    // let mut rng = rand::thread_rng();
+    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
 
     object_list.push(Box::new(Sphere::new(
         Vector3::new(0.0, -1000.0, 0.0),
         1000.0,
-        Material::new(
-            MaterialType::Lambertian,
-            Box::new(ConstantTexture::new(Vector3::new(0.7, 0.6, 0.5))),
-            0.0,
-            0.0,
-        ),
+        Material::Lambertian {
+            albedo: Texture::ConstantTexture {color: Vector3::new(0.7, 0.6, 0.5)},
+        },
     )));
-
-    // for a in -2..2 {
-    //     for b in -2..2 {
-    //         let choose_mat: f32 = rng.gen::<f32>();
-    //         let center: Vector3 = Vector3::new(
-    //             a as f32 + 0.9 * rng.gen::<f32>(),
-    //             0.2,
-    //             b as f32 + 0.9 * rng.gen::<f32>(),
-    //         );
-    //         if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-    //             if choose_mat < 0.8 {
-    //                 object_list.push(Box::new(MovingSphere::new(
-    //                     center,
-    //                     center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
-    //                     0.0,
-    //                     1.0,
-    //                     0.2,
-    //                     Material::new(
-    //                         MaterialType::Lambertian,
-    //                         Box::new(ConstantTexture::new(Vector3::new(
-    //                             rng.gen::<f32>() * rng.gen::<f32>(),
-    //                             rng.gen::<f32>() * rng.gen::<f32>(),
-    //                             rng.gen::<f32>() * rng.gen::<f32>(),
-    //                         ))),
-    //                         0.0,
-    //                         0.0,
-    //                     ),
-    //                 )));
-    //             } else if choose_mat < 0.95 {
-    //                 object_list.push(Box::new(Sphere::new(
-    //                     center,
-    //                     0.2,
-    //                     Material::new(
-    //                         MaterialType::Metal,
-    //                         Box::new(ConstantTexture::new(Vector3::new(
-    //                             0.5 * (1.0 + rng.gen::<f32>()),
-    //                             0.5 * (1.0 + rng.gen::<f32>()),
-    //                             0.5 * (1.0 + rng.gen::<f32>()),
-    //                         ))),
-    //                         0.5 * rng.gen::<f32>(),
-    //                         0.0,
-    //                     ),
-    //                 )));
-    //             } else {
-    //                 object_list.push(Box::new(Sphere::new(
-    //                     center,
-    //                     0.2,
-    //                     Material::new(
-    //                         MaterialType::Dielectric,
-    //                         Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
-    //                         0.0,
-    //                         1.5,
-    //                     ),
-    //                 )));
-    //             }
-    //         }
-    //     }
-    // }
-
-    // object_list.push(Box::new(Sphere::new(
-    //     Vector3::new(0.0, 1.0, 0.0),
-    //     1.0,
-    //     Material::new(
-    //         MaterialType::Dielectric,
-    //         Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
-    //         0.0,
-    //         1.5,
-    //     ),
-    // )));
     object_list.push(Box::new(Sphere::new(
         Vector3::new(0.0, 1.0, 0.0),
         1.0,
-        Material::new(
-            MaterialType::Lambertian,
-            Box::new(NoiseTexture::new(5.0)),
-            0.0,
-            0.0,
-        ),
+        Material::Lambertian {
+            albedo: Texture::NoiseTexture { noise: Perlin::new(), scale: 5.0 },
+        },
     )));
-    // object_list.push(Box::new(Sphere::new(
-    //     Vector3::new(4.0, 1.0, 0.0),
-    //     1.0,
-    //     Material::new(
-    //         MaterialType::Metal,
-    //         Box::new(ConstantTexture::new(Vector3::new(0.7, 0.6, 0.5))),
-    //         0.0,
-    //         0.0,
-    //     ),
-    // )));
 
     object_list
 }
 
-fn random_scene2() -> Vec<Box<Hittable + Sync>> {
+fn random_scene2() -> Vec<Box<Hittable>> {
     let n: usize = 500;
-    let mut object_list: Vec<Box<Hittable + Sync>> = Vec::with_capacity(n + 1);
+    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
     let mut rng = rand::thread_rng();
 
-    for a in -2..2 {
-        for b in -2..2 {
+    for a in -10..10 {
+        for b in -10..10 {
             let choose_mat: f32 = rng.gen::<f32>();
             let center: Vector3 = Vector3::new(
                 a as f32 + 0.9 * rng.gen::<f32>(),
@@ -160,42 +74,36 @@ fn random_scene2() -> Vec<Box<Hittable + Sync>> {
                         0.0,
                         1.0,
                         0.2,
-                        Material::new(
-                            MaterialType::Lambertian,
-                            Box::new(ConstantTexture::new(Vector3::new(
-                                rng.gen::<f32>() * rng.gen::<f32>(),
-                                rng.gen::<f32>() * rng.gen::<f32>(),
-                                rng.gen::<f32>() * rng.gen::<f32>(),
-                            ))),
-                            0.0,
-                            0.0,
-                        ),
+                        Material::Lambertian {
+                            albedo: Texture::ConstantTexture {
+                                color: Vector3::new(
+                                    rng.gen::<f32>() * rng.gen::<f32>(),
+                                    rng.gen::<f32>() * rng.gen::<f32>(),
+                                    rng.gen::<f32>() * rng.gen::<f32>(),
+                                ),
+                            }
+                        },
                     )));
                 } else if choose_mat < 0.95 {
                     object_list.push(Box::new(Sphere::new(
                         center,
                         0.2,
-                        Material::new(
-                            MaterialType::Metal,
-                            Box::new(ConstantTexture::new(Vector3::new(
-                                0.5 * (1.0 + rng.gen::<f32>()),
-                                0.5 * (1.0 + rng.gen::<f32>()),
-                                0.5 * (1.0 + rng.gen::<f32>()),
-                            ))),
-                            0.5 * rng.gen::<f32>(),
-                            0.0,
-                        ),
+                        Material::Metal {
+                            albedo: Texture::ConstantTexture {
+                                color: Vector3::new(
+                                    0.5 * (1.0 + rng.gen::<f32>()),
+                                    0.5 * (1.0 + rng.gen::<f32>()),
+                                    0.5 * (1.0 + rng.gen::<f32>()),
+                                )
+                            },
+                            fuzz: 0.5 * rng.gen::<f32>(),
+                        },
                     )));
                 } else {
                     object_list.push(Box::new(Sphere::new(
                         center,
                         0.2,
-                        Material::new(
-                            MaterialType::Dielectric,
-                            Box::new(ConstantTexture::new(Vector3::new(0.0, 0.0, 0.0))),
-                            0.0,
-                            1.5,
-                        ),
+                        Material::Dielectric { ref_idx: 1.5 },
                     )));
                 }
             }
@@ -222,7 +130,7 @@ fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
         Some((rec, material)) => {
-            if depth < 50 {
+            if depth < 500 {
                 match material.scatter(r, rec) {
                     Some((attenuation, scattered)) => {
                         attenuation * color(&scattered, world, depth + 1)
@@ -267,17 +175,8 @@ fn main() {
 
     // TODO: why is this taking longer :(
     let mut scene = random_scene();
-    let mut balls = random_scene2();
-    // let mut test: Vec<Box<Hittable + Sync>> = vec![Box::new(BvhTree::new(balls, 0.0, 1.0))];
-    for el in balls {
-        scene.push(el);
-    }
-    // for ball in balls {
-    //     scene.push(ball)
-    // }
-    // scene.push(Box::new(BvhTree::new(balls, 0.0, 1.0)));
-    // let world = &ObjectList::new(vec![Box::new(BvhTree::new(scene, 0.0, 1.0))]);
-    // let world = BvhTree::new(&scene.list.as_slice(), 0.0, 1.0);
+    let balls = random_scene2();
+    scene.push(Box::new(BvhTree::new(balls, 0.0, 1.0)));
     let world = &ObjectList::new(scene);
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];

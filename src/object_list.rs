@@ -8,11 +8,11 @@ pub struct ObjectList {
     // structs that implement the Hittable trait
     // otherwise it would allow for only one kind
     // e.g. Sphere
-    pub list: Vec<Box<dyn Hittable + Sync>>,
+    pub list: Vec<Box<Hittable>>,
 }
 
 impl ObjectList {
-    pub fn new(list: Vec<Box<dyn Hittable + Sync>>) -> Self {
+    pub fn new(list: Vec<Box<Hittable>>) -> Self {
         ObjectList { list }
     }
 }

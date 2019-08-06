@@ -1,7 +1,7 @@
 use super::object::HitRecord;
 use super::random_in_unit_sphere;
 use super::ray::Ray;
-use super::texture::{ConstantTexture, Texture};
+use super::texture::Texture;
 use super::vector3::{dot, unit_vector, Vector3};
 
 use rand::Rng;
@@ -28,61 +28,36 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
 }
 
-#[derive(Clone)]
-pub enum MaterialType {
-    Lambertian,
-    Metal,
-    Dielectric,
-}
-
-#[derive(Clone)]
-pub struct Material {
-    kind: MaterialType,
-    albedo: Box<dyn Texture + Sync>,
-    fuzz: f32,
-    ref_idx: f32,
+pub enum Material {
+    Lambertian { albedo: Texture },
+    Metal { albedo: Texture, fuzz: f32 },
+    Dielectric { ref_idx: f32 },
 }
 
 impl Material {
-    pub fn new(kind: MaterialType, albedo: Box<dyn Texture + Sync>, f: f32, ref_idx: f32) -> Self {
-        let mut fuzz = f;
-        if f >= 1.0 {
-            fuzz = 1.0;
-        }
-        Material {
-            kind,
-            albedo,
-            fuzz,
-            ref_idx,
-        }
-    }
-}
-
-pub trait Scatterable {
-    fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Vector3, Ray)>;
-}
-
-impl Scatterable for Material {
-    fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Vector3, Ray)> {
-        match self.kind {
-            MaterialType::Lambertian => {
+    pub fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Vector3, Ray)> {
+        match self {
+            Material::Lambertian { albedo } => {
                 let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
                 Some((
-                    self.albedo.value(0.0, 0.0, &rec.p),
+                    albedo.value(0.0, 0.0, &rec.p),
                     Ray::new(rec.p, target - rec.p, r_in.time),
                 ))
             }
-            MaterialType::Metal => {
+            Material::Metal { albedo, fuzz } => {
+                if *fuzz > 1.0 {
+                    let fuzz = 1.0;
+                }
                 let reflected = reflect(unit_vector(r_in.direction()), rec.normal);
                 let scattered =
-                    Ray::new(rec.p, reflected + self.fuzz * random_in_unit_sphere(), 0.0);
+                    Ray::new(rec.p, reflected + *fuzz * random_in_unit_sphere(), 0.0);
                 if dot(scattered.direction(), rec.normal) > 0.0 {
-                    Some((self.albedo.value(0.0, 0.0, &rec.p), scattered))
+                    Some((albedo.value(0.0, 0.0, &rec.p), scattered))
                 } else {
                     None
                 }
             }
-            MaterialType::Dielectric => {
+            Material::Dielectric { ref_idx } => {
                 let outward_normal: Vector3;
                 let reflected: Vector3 = reflect(r_in.direction(), rec.normal);
                 let ni_over_nt: f32;
@@ -96,17 +71,17 @@ impl Scatterable for Material {
 
                 if ray_angle > 0.0 {
                     outward_normal = -rec.normal;
-                    ni_over_nt = self.ref_idx;
-                    cosine = self.ref_idx * cosine;
+                    ni_over_nt = *ref_idx;
+                    cosine = ref_idx * cosine;
                 } else {
                     outward_normal = rec.normal;
-                    ni_over_nt = 1.0 / self.ref_idx;
+                    ni_over_nt = 1.0 / ref_idx;
                     cosine = -cosine;
                 }
 
                 match refract(r_in.direction(), outward_normal, ni_over_nt) {
                     Some(refracted) => {
-                        reflect_prob = schlick(cosine, self.ref_idx);
+                        reflect_prob = schlick(cosine, *ref_idx);
                         saved_refracted = refracted;
                     }
                     None => {

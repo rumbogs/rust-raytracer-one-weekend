@@ -4,16 +4,14 @@ use std::cmp::Ordering;
 use super::aabb::{surrounding_box, Aabb};
 use super::material::Material;
 use super::object::{HitRecord, Hittable};
-use super::object_list::ObjectList;
 use super::ray::Ray;
 
 pub enum BinaryTree {
-    Leaf(Box<dyn Hittable + Sync>),
+    Leaf(Box<Hittable>),
     Node(Box<BvhTree>, Box<BvhTree>),
-    Null,
 }
 
-fn box_x_compare(a: &Box<dyn Hittable + Sync>, b: &Box<dyn Hittable + Sync>) -> Ordering {
+fn box_x_compare(a: &Box<Hittable>, b: &Box<Hittable>) -> Ordering {
     let left_aabb = a.bounding_box(0.0, 0.0);
     let right_aabb = b.bounding_box(0.0, 0.0);
     match (left_aabb, right_aabb) {
@@ -31,7 +29,7 @@ fn box_x_compare(a: &Box<dyn Hittable + Sync>, b: &Box<dyn Hittable + Sync>) -> 
     }
 }
 
-fn box_y_compare(a: &Box<dyn Hittable + Sync>, b: &Box<dyn Hittable + Sync>) -> Ordering {
+fn box_y_compare(a: &Box<Hittable>, b: &Box<Hittable>) -> Ordering {
     let left_aabb = a.bounding_box(0.0, 0.0);
     let right_aabb = b.bounding_box(0.0, 0.0);
     match (left_aabb, right_aabb) {
@@ -49,7 +47,7 @@ fn box_y_compare(a: &Box<dyn Hittable + Sync>, b: &Box<dyn Hittable + Sync>) -> 
     }
 }
 
-fn box_z_compare(a: &Box<dyn Hittable + Sync>, b: &Box<dyn Hittable + Sync>) -> Ordering {
+fn box_z_compare(a: &Box<Hittable>, b: &Box<Hittable>) -> Ordering {
     let left_aabb = a.bounding_box(0.0, 0.0);
     let right_aabb = b.bounding_box(0.0, 0.0);
     match (left_aabb, right_aabb) {
@@ -67,24 +65,20 @@ fn box_z_compare(a: &Box<dyn Hittable + Sync>, b: &Box<dyn Hittable + Sync>) -> 
     }
 }
 
-// fn quickSort(list: &[Box<dyn Hittable + Sync>], compare: fn(&Box<dyn Hittable + Sync>, &Box<dyn Hittable + Sync>) -> Ordering) -> Vec<Box<dyn Hittable + Sync>> {
-
-// }
-
 pub struct BvhTree {
     binary_tree: BinaryTree,
     aabb: Aabb,
 }
 
 impl BvhTree {
-    pub fn new(mut list: Vec<Box<dyn Hittable + Sync>>, t0: f32, t1: f32) -> Self {
+    pub fn new(mut list: Vec<Box<Hittable>>, t0: f32, t1: f32) -> Self {
         let mut rng = rand::thread_rng();
         let axis: usize = rng.gen_range(0, 3);
-        // match axis {
-        //     0 => list.sort_by(box_x_compare),
-        //     1 => list.sort_by(box_y_compare),
-        //     _ => list.sort_by(box_z_compare),
-        // };
+        match axis {
+            0 => list.sort_by(box_x_compare),
+            1 => list.sort_by(box_y_compare),
+            _ => list.sort_by(box_z_compare),
+        };
         let list_length = list.len();
 
         match list_length {
@@ -96,13 +90,13 @@ impl BvhTree {
                     binary_tree: BinaryTree::Leaf(hittable),
                     aabb: match bbox {
                         Some(bb) => bb,
-                        None => panic!["No bounding box"]
+                        None => panic!["No bounding box"],
                     },
                 };
-            },
+            }
             _ => {
-                let mut vec1: Vec<Box<Hittable + Sync>> = Vec::with_capacity(list_length / 2 + 1);
-                let mut vec2: Vec<Box<Hittable + Sync>> = Vec::with_capacity(list_length / 2);
+                let mut vec1: Vec<Box<Hittable>> = Vec::with_capacity(list_length / 2 + 1);
+                let mut vec2: Vec<Box<Hittable>> = Vec::with_capacity(list_length / 2);
 
                 for (i, el) in list.into_iter().enumerate() {
                     if i < list_length / 2 {
@@ -121,7 +115,6 @@ impl BvhTree {
                     (None, Some(rbb)) => rbb,
                     (None, None) => panic!["No bounding box"],
                 };
-                
                 return BvhTree {
                     binary_tree: BinaryTree::Node(Box::new(left), Box::new(right)),
                     aabb,
@@ -141,6 +134,7 @@ impl Hittable for BvhTree {
                         Some((lr, lm)) => Some((lr, lm)),
                         None => None,
                     };
+
                     let right_rec = match right.hit(ray, t_min, t_max) {
                         Some((rr, rm)) => Some((rr, rm)),
                         None => None,
@@ -149,20 +143,18 @@ impl Hittable for BvhTree {
                     match (left_rec, right_rec) {
                         (Some((lr, lm)), Some((rr, rm))) => {
                             if lr.t < rr.t {
-                                Some((lr, &lm))
+                                Some((lr, lm))
                             } else {
-                                Some((rr, &rm))
+                                Some((rr, rm))
                             }
                         }
-                        (Some((lr, lm)), None) => Some((lr, &lm)),
-                        (None, Some((rr, rm))) => Some((rr, &rm)),
+                        (Some((r, m)), None) | (None, Some((r, m))) => Some((r, m)),
                         (None, None) => None,
                     }
                 } else {
                     None
                 }
-            },
-            BinaryTree::Null => None,
+            }
         }
     }
 
