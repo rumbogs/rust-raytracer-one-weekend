@@ -7,55 +7,49 @@ use rand::Rng;
 use std::time::Instant;
 
 mod aabb;
-mod bvh_node;
 mod camera;
 mod material;
-mod moving_sphere;
 mod object;
-mod object_list;
 mod perlin;
 mod ray;
-mod sphere;
 mod texture;
 mod vector3;
+mod binary_tree;
 
-use bvh_node::BvhTree;
 use camera::Camera;
 use material::{Material};
-use moving_sphere::MovingSphere;
-use object::Hittable;
-use object_list::ObjectList;
+use object::Object;
 use ray::Ray;
-use sphere::Sphere;
 use texture::{Texture};
 use vector3::{unit_vector, Vector3};
 use perlin::{Perlin};
+use binary_tree::{create_binary_tree};
 
-fn random_scene() -> Vec<Box<Hittable>> {
+fn random_scene() -> Vec<Box<Object>> {
     let n: usize = 500;
-    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
+    let mut object_list: Vec<Box<Object>> = Vec::with_capacity(n + 1);
 
-    object_list.push(Box::new(Sphere::new(
-        Vector3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        Material::Lambertian {
+    object_list.push(Box::new(Object::Sphere {
+        center: Vector3::new(0.0, -1000.0, 0.0),
+        radius: 1000.0,
+        material: Material::Lambertian {
             albedo: Texture::ConstantTexture {color: Vector3::new(0.7, 0.6, 0.5)},
         },
-    )));
-    object_list.push(Box::new(Sphere::new(
-        Vector3::new(0.0, 1.0, 0.0),
-        1.0,
-        Material::Lambertian {
+    }));
+    object_list.push(Box::new(Object::Sphere {
+        center: Vector3::new(0.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Material::Lambertian {
             albedo: Texture::NoiseTexture { noise: Perlin::new(), scale: 5.0 },
         },
-    )));
+    }));
 
     object_list
 }
 
-fn random_scene2() -> Vec<Box<Hittable>> {
+fn random_scene2() -> Vec<Box<Object>> {
     let n: usize = 500;
-    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
+    let mut object_list: Vec<Box<Object>> = Vec::with_capacity(n + 1);
     let mut rng = rand::thread_rng();
 
     for a in -10..10 {
@@ -68,13 +62,13 @@ fn random_scene2() -> Vec<Box<Hittable>> {
             );
             if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    object_list.push(Box::new(MovingSphere::new(
-                        center,
-                        center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
-                        0.0,
-                        1.0,
-                        0.2,
-                        Material::Lambertian {
+                    object_list.push(Box::new(Object::MovingSphere {
+                        center0: center,
+                        center1: center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
+                        time0: 0.0,
+                        time1: 1.0,
+                        radius: 0.2,
+                        material: Material::Lambertian {
                             albedo: Texture::ConstantTexture {
                                 color: Vector3::new(
                                     rng.gen::<f32>() * rng.gen::<f32>(),
@@ -83,12 +77,12 @@ fn random_scene2() -> Vec<Box<Hittable>> {
                                 ),
                             }
                         },
-                    )));
+                    }));
                 } else if choose_mat < 0.95 {
-                    object_list.push(Box::new(Sphere::new(
+                    object_list.push(Box::new(Object::Sphere {
                         center,
-                        0.2,
-                        Material::Metal {
+                        radius: 0.2,
+                        material: Material::Metal {
                             albedo: Texture::ConstantTexture {
                                 color: Vector3::new(
                                     0.5 * (1.0 + rng.gen::<f32>()),
@@ -98,13 +92,13 @@ fn random_scene2() -> Vec<Box<Hittable>> {
                             },
                             fuzz: 0.5 * rng.gen::<f32>(),
                         },
-                    )));
+                    }));
                 } else {
-                    object_list.push(Box::new(Sphere::new(
+                    object_list.push(Box::new(Object::Sphere {
                         center,
-                        0.2,
-                        Material::Dielectric { ref_idx: 1.5 },
-                    )));
+                        radius: 0.2,
+                        material: Material::Dielectric { ref_idx: 1.5 },
+                    }));
                 }
             }
         }
@@ -125,7 +119,7 @@ fn random_in_unit_sphere() -> Vector3 {
     p
 }
 
-fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
+fn color(r: &Ray, world: &Object, depth: usize) -> Vector3 {
     // some of the rays hit at 0.00000001 instead of 0.0
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
@@ -176,8 +170,8 @@ fn main() {
     // TODO: why is this taking longer :(
     let mut scene = random_scene();
     let balls = random_scene2();
-    scene.push(Box::new(BvhTree::new(balls, 0.0, 1.0)));
-    let world = &ObjectList::new(scene);
+    scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
+    let world = &Object::ObjectList { list: scene };
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
     let rows: Vec<&mut [Vector3]> = pixels.chunks_mut(thread_rows * width).collect();

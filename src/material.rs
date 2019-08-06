@@ -45,12 +45,13 @@ impl Material {
                 ))
             }
             Material::Metal { albedo, fuzz } => {
-                if *fuzz > 1.0 {
-                    let fuzz = 1.0;
+                let mut fuzz = *fuzz;
+                if fuzz > 1.0 {
+                    fuzz = 1.0;
                 }
                 let reflected = reflect(unit_vector(r_in.direction()), rec.normal);
                 let scattered =
-                    Ray::new(rec.p, reflected + *fuzz * random_in_unit_sphere(), 0.0);
+                    Ray::new(rec.p, reflected + fuzz * random_in_unit_sphere(), 0.0);
                 if dot(scattered.direction(), rec.normal) > 0.0 {
                     Some((albedo.value(0.0, 0.0, &rec.p), scattered))
                 } else {

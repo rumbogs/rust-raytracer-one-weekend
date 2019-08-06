@@ -70,6 +70,18 @@ impl Sub for Vector3 {
   }
 }
 
+impl Sub for &Vector3 {
+  type Output = Vector3;
+
+  fn sub(self, other: &Vector3) -> Vector3 {
+    Vector3::new(
+      self.e[0] - other.e[0],
+      self.e[1] - other.e[1],
+      self.e[2] - other.e[2],
+    )
+  }
+}
+
 impl Mul for Vector3 {
   type Output = Vector3;
 
