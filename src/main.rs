@@ -3,27 +3,29 @@ extern crate image;
 extern crate num_cpus;
 extern crate rand;
 
+use image::GenericImageView;
 use rand::Rng;
 use std::time::Instant;
 
 mod aabb;
+mod binary_tree;
 mod camera;
 mod material;
 mod object;
 mod perlin;
 mod ray;
 mod texture;
+mod utils;
 mod vector3;
-mod binary_tree;
 
+use binary_tree::create_binary_tree;
 use camera::Camera;
-use material::{Material};
+use material::Material;
 use object::Object;
+use perlin::Perlin;
 use ray::Ray;
-use texture::{Texture};
+use texture::Texture;
 use vector3::{unit_vector, Vector3};
-use perlin::{Perlin};
-use binary_tree::{create_binary_tree};
 
 fn random_scene() -> Vec<Box<Object>> {
     let n: usize = 500;
@@ -33,14 +35,26 @@ fn random_scene() -> Vec<Box<Object>> {
         center: Vector3::new(0.0, -1000.0, 0.0),
         radius: 1000.0,
         material: Material::Lambertian {
-            albedo: Texture::ConstantTexture {color: Vector3::new(0.7, 0.6, 0.5)},
+            albedo: Texture::ConstantTexture {
+                color: Vector3::new(0.7, 0.6, 0.5),
+            },
         },
     }));
+    // object_list.push(Box::new(Object::Sphere {
+    //     center: Vector3::new(0.0, 1.0, 0.0),
+    //     radius: 1.0,
+    //     material: Material::Lambertian {
+    //         albedo: Texture::NoiseTexture { noise: Perlin::new(), scale: 5.0 },
+    //     },
+    // }));
+    let img = image::open("pug.jpg").unwrap();
+    let (nx, ny) = img.dimensions();
+
     object_list.push(Box::new(Object::Sphere {
         center: Vector3::new(0.0, 1.0, 0.0),
         radius: 1.0,
         material: Material::Lambertian {
-            albedo: Texture::NoiseTexture { noise: Perlin::new(), scale: 5.0 },
+            albedo: Texture::ImageTexture { img },
         },
     }));
 
@@ -75,7 +89,7 @@ fn random_scene2() -> Vec<Box<Object>> {
                                     rng.gen::<f32>() * rng.gen::<f32>(),
                                     rng.gen::<f32>() * rng.gen::<f32>(),
                                 ),
-                            }
+                            },
                         },
                     }));
                 } else if choose_mat < 0.95 {
@@ -88,7 +102,7 @@ fn random_scene2() -> Vec<Box<Object>> {
                                     0.5 * (1.0 + rng.gen::<f32>()),
                                     0.5 * (1.0 + rng.gen::<f32>()),
                                     0.5 * (1.0 + rng.gen::<f32>()),
-                                )
+                                ),
                             },
                             fuzz: 0.5 * rng.gen::<f32>(),
                         },
@@ -169,8 +183,8 @@ fn main() {
 
     // TODO: why is this taking longer :(
     let mut scene = random_scene();
-    let balls = random_scene2();
-    scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
+    // let balls = random_scene2();
+    // scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
     let world = &Object::ObjectList { list: scene };
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];

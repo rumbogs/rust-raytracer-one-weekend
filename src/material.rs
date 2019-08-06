@@ -40,7 +40,7 @@ impl Material {
             Material::Lambertian { albedo } => {
                 let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
                 Some((
-                    albedo.value(0.0, 0.0, &rec.p),
+                    albedo.value(rec.u, rec.v, &rec.p),
                     Ray::new(rec.p, target - rec.p, r_in.time),
                 ))
             }
@@ -50,10 +50,9 @@ impl Material {
                     fuzz = 1.0;
                 }
                 let reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-                let scattered =
-                    Ray::new(rec.p, reflected + fuzz * random_in_unit_sphere(), 0.0);
+                let scattered = Ray::new(rec.p, reflected + fuzz * random_in_unit_sphere(), 0.0);
                 if dot(scattered.direction(), rec.normal) > 0.0 {
-                    Some((albedo.value(0.0, 0.0, &rec.p), scattered))
+                    Some((albedo.value(rec.u, rec.v, &rec.p), scattered))
                 } else {
                     None
                 }

@@ -3,16 +3,19 @@ use super::binary_tree::BinaryTree;
 use super::material::Material;
 use super::ray::Ray;
 use super::vector3::{dot, Vector3};
+use super::utils::{center_at_time, get_sphere_uv};
 
 pub struct HitRecord {
+    pub u: f32,
+    pub v: f32,
     pub t: f32,
     pub p: Vector3,
     pub normal: Vector3,
 }
 
 impl HitRecord {
-    pub fn new(t: f32, p: Vector3, normal: Vector3) -> HitRecord {
-        HitRecord { t, p, normal }
+    pub fn new(u: f32, v: f32, t: f32, p: Vector3, normal: Vector3) -> HitRecord {
+        HitRecord { u, v, t, p, normal }
     }
 }
 
@@ -39,16 +42,6 @@ pub enum Object {
     },
 }
 
-pub fn center_at_time(
-    time: f32,
-    center0: &Vector3,
-    center1: &Vector3,
-    time0: &f32,
-    time1: &f32,
-) -> Vector3 {
-    ((time - time0) / (time1 - time0)) * (center1 - center0) + *center0
-}
-
 impl Object {
     pub fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<(HitRecord, &Material)> {
         match self {
@@ -68,14 +61,16 @@ impl Object {
                         let t = temp;
                         let p = r.point_at_parameter(t);
                         let normal = (p - *center) / *radius;
-                        return Some((HitRecord::new(t, p, normal), &material));
+                        let (u, v) = get_sphere_uv(&((p - *center) / *radius));
+                        return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
                     temp = (-b + (b * b - a * c).sqrt()) / a;
                     if temp < t_max && temp > t_min {
                         let t = temp;
                         let p = r.point_at_parameter(t);
                         let normal = (p - *center) / *radius;
-                        return Some((HitRecord::new(t, p, normal), &material));
+                        let (u, v) = get_sphere_uv(&((p - *center) / *radius));
+                        return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
                 }
                 None
@@ -100,14 +95,16 @@ impl Object {
                         let t = temp;
                         let p = r.point_at_parameter(t);
                         let normal = (p - center) / *radius;
-                        return Some((HitRecord::new(t, p, normal), &material));
+                        let (u, v) = get_sphere_uv(&((p - center) / *radius));
+                        return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
                     temp = (-b + (b * b - a * c).sqrt()) / a;
                     if temp < t_max && temp > t_min {
                         let t = temp;
                         let p = r.point_at_parameter(t);
                         let normal = (p - center) / *radius;
-                        return Some((HitRecord::new(t, p, normal), &material));
+                        let (u, v) = get_sphere_uv(&((p - center) / *radius));
+                        return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
                 }
                 None
