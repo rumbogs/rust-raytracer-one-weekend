@@ -30,15 +30,21 @@ use vector3::{unit_vector, Vector3};
 fn random_scene() -> Vec<Box<Object>> {
     let n: usize = 500;
     let mut object_list: Vec<Box<Object>> = Vec::with_capacity(n + 1);
+    let light_material = Material::DiffuseLight {
+        emit: Texture::ConstantTexture {
+            color: Vector3::new(4.0, 4.0, 4.0),
+        },
+    };
 
     object_list.push(Box::new(Object::Sphere {
         center: Vector3::new(0.0, -1000.0, 0.0),
         radius: 1000.0,
         material: Material::Lambertian {
             albedo: Texture::ConstantTexture {
-                color: Vector3::new(0.7, 0.6, 0.5),
+                color: Vector3::new(0.7, 0.7, 0.7),
             },
         },
+        flip_normals: false,
     }));
     // object_list.push(Box::new(Object::Sphere {
     //     center: Vector3::new(0.0, 1.0, 0.0),
@@ -47,6 +53,16 @@ fn random_scene() -> Vec<Box<Object>> {
     //         albedo: Texture::NoiseTexture { noise: Perlin::new(), scale: 5.0 },
     //     },
     // }));
+    object_list.push(Box::new(Object::Sphere {
+        center: Vector3::new(3.0, 1.0, 3.0),
+        radius: 1.0,
+        material: Material::DiffuseLight {
+            emit: Texture::ConstantTexture {
+                color: Vector3::new(4.0, 4.0, 4.0),
+            },
+        },
+        flip_normals: false,
+    }));
     let img = image::open("pug.jpg").unwrap();
     let (nx, ny) = img.dimensions();
 
@@ -56,8 +72,114 @@ fn random_scene() -> Vec<Box<Object>> {
         material: Material::Lambertian {
             albedo: Texture::ImageTexture { img },
         },
+        flip_normals: false,
     }));
 
+    object_list.push(Box::new(Object::XYRect {
+        x0: -2.0,
+        x1: 2.0,
+        y0: 1.0,
+        y1: 3.0,
+        k: -3.0,
+        material: Material::DiffuseLight {
+            emit: Texture::ConstantTexture {
+                color: Vector3::new(4.0, 4.0, 4.0),
+            },
+        },
+        flip_normals: false,
+    }));
+
+    object_list
+}
+
+fn cornell_box() -> Vec<Box<Object>> {
+    let n: usize = 500;
+    let mut object_list: Vec<Box<Object>> = Vec::with_capacity(n + 1);
+    let red: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.65, 0.05, 0.05),
+        },
+    };
+    let white: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.73, 0.73, 0.73),
+        },
+    };
+    let white2: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.73, 0.73, 0.73),
+        },
+    };
+    let white3: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.73, 0.73, 0.73),
+        },
+    };
+    let green: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.12, 0.45, 0.15),
+        },
+    };
+    let light: Material = Material::DiffuseLight {
+        emit: Texture::ConstantTexture {
+            color: Vector3::new(15.0, 15.0, 15.0),
+        },
+    };
+
+    object_list.push(Box::new(Object::YZRect {
+        y0: 0.0,
+        y1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 555.0,
+        material: green,
+        flip_normals: true,
+    }));
+    object_list.push(Box::new(Object::YZRect {
+        y0: 0.0,
+        y1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 0.0,
+        material: red,
+        flip_normals: false,
+    }));
+    object_list.push(Box::new(Object::XZRect {
+        x0: 213.0,
+        x1: 343.0,
+        z0: 227.0,
+        z1: 332.0,
+        k: 554.0,
+        material: light,
+        flip_normals: false,
+    }));
+    object_list.push(Box::new(Object::XZRect {
+        x0: 0.0,
+        x1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 555.0,
+        material: white,
+        flip_normals: true,
+    }));
+    object_list.push(Box::new(Object::XZRect {
+        x0: 0.0,
+        x1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 0.0,
+        material: white2,
+        flip_normals: false,
+    }));
+    object_list.push(Box::new(Object::XYRect {
+        x0: 0.0,
+        x1: 555.0,
+        y0: 0.0,
+        y1: 555.0,
+        k: 555.0,
+        material: white3,
+        flip_normals: true,
+    }));
     object_list
 }
 
@@ -91,6 +213,7 @@ fn random_scene2() -> Vec<Box<Object>> {
                                 ),
                             },
                         },
+                        flip_normals: false,
                     }));
                 } else if choose_mat < 0.95 {
                     object_list.push(Box::new(Object::Sphere {
@@ -106,12 +229,14 @@ fn random_scene2() -> Vec<Box<Object>> {
                             },
                             fuzz: 0.5 * rng.gen::<f32>(),
                         },
+                        flip_normals: false,
                     }));
                 } else {
                     object_list.push(Box::new(Object::Sphere {
                         center,
                         radius: 0.2,
                         material: Material::Dielectric { ref_idx: 1.5 },
+                        flip_normals: false,
                     }));
                 }
             }
@@ -138,21 +263,23 @@ fn color(r: &Ray, world: &Object, depth: usize) -> Vector3 {
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
         Some((rec, material)) => {
-            if depth < 500 {
+            let emitted: Vector3 = material.emitted(rec.u, rec.v, &rec.p);
+            if depth < 50 {
                 match material.scatter(r, rec) {
                     Some((attenuation, scattered)) => {
-                        attenuation * color(&scattered, world, depth + 1)
+                        emitted + attenuation * color(&scattered, world, depth + 1)
                     }
-                    None => Vector3::new(0.0, 0.0, 0.0),
+                    None => emitted,
                 }
             } else {
                 Vector3::new(0.0, 0.0, 0.0)
             }
         }
         None => {
-            let unit_direction = unit_vector(r.direction());
-            let t: f32 = 0.5 * (unit_direction.y() + 1.0);
-            (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
+            // let unit_direction = unit_vector(r.direction());
+            // let t: f32 = 0.5 * (unit_direction.y() + 1.0);
+            // (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
+            Vector3::new(0.0, 0.0, 0.0)
         }
     }
 }
@@ -160,18 +287,16 @@ fn color(r: &Ray, world: &Object, depth: usize) -> Vector3 {
 fn main() {
     let cpu_num = num_cpus::get() - 1; // leave some for the rest of the processes
     let now = Instant::now();
-    let width = 640;
-    let height = 480;
+    let width = 400;
+    let height = 400;
     // larger makes blur/shadows/antialias smoother
-    let smoothness: u32 = 10;
+    let smoothness: u32 = 100;
     // use one less thread for exact division
     // the last one will have less pixels to calculate
     let thread_rows = height / cpu_num + 1;
-    let lookfrom = Vector3::new(11.0, 4.0, 5.0);
-    let lookat = Vector3::new(0.0, 0.0, 0.0);
     let camera: &Camera = &Camera::new(
-        lookfrom,
-        lookat,
+        Vector3::new(11.0, 4.0, 5.0),
+        Vector3::new(0.0, 0.0, 0.0),
         Vector3::new(0.0, 1.0, 0.0),
         36.0,
         width as f32 / height as f32,
@@ -180,9 +305,20 @@ fn main() {
         0.0,
         1.0,
     );
+    let cornell_camera: &Camera = &Camera::new(
+        Vector3::new(278.0, 278.0, -800.0),
+        Vector3::new(278.0, 278.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        40.0,
+        width as f32 / height as f32,
+        0.0,
+        10.0,
+        0.0,
+        1.0,
+    );
 
     // TODO: why is this taking longer :(
-    let mut scene = random_scene();
+    let mut scene = cornell_box();
     // let balls = random_scene2();
     // scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
     let world = &Object::ObjectList { list: scene };
@@ -221,7 +357,7 @@ fn main() {
                         for _ in 0..smoothness {
                             let u = (x as f32 + rng.gen::<f32>()) / width as f32;
                             let v = (inverted_row + rng.gen::<f32>()) / height as f32;
-                            let r = camera.get_ray(u, v);
+                            let r = cornell_camera.get_ray(u, v);
                             col += color(&r, &world, 0);
                         }
                         col /= smoothness as f32;

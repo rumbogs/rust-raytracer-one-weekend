@@ -1,4 +1,5 @@
 use super::vector3::Vector3;
+use super::object::Object;
 use image::{DynamicImage, GenericImageView};
 use std::f32::consts::PI;
 

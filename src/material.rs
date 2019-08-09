@@ -32,6 +32,7 @@ pub enum Material {
     Lambertian { albedo: Texture },
     Metal { albedo: Texture, fuzz: f32 },
     Dielectric { ref_idx: f32 },
+    DiffuseLight { emit: Texture },
 }
 
 impl Material {
@@ -96,6 +97,18 @@ impl Material {
                 }
 
                 Some((attenuation, scattered))
+            }
+            _ => None
+        }
+    }
+
+    pub fn emitted(&self, u: f32, v: f32, p: &Vector3) -> Vector3 {
+        match self {
+            Material::DiffuseLight { emit } => {
+                emit.value(u, v, p)
+            }
+            _ => {
+                Vector3::new(0.0, 0.0, 0.0)
             }
         }
     }
