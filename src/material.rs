@@ -28,6 +28,8 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
 }
 
+
+#[derive(Clone)]
 pub enum Material {
     Lambertian { albedo: Texture },
     Metal { albedo: Texture, fuzz: f32 },

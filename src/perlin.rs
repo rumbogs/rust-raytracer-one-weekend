@@ -55,6 +55,7 @@ fn perlin_generate_perm() -> [usize; 256] {
     p
 }
 
+#[derive(Clone)]
 pub struct Perlin {
     ranfloat: [Vector3; 256],
     perm_x: [usize; 256],

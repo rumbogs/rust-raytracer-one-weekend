@@ -27,7 +27,6 @@ pub enum Object {
         y1: f32,
         k: f32,
         material: Material,
-        flip_normals: bool,
     },
     XZRect {
         x0: f32,
@@ -36,7 +35,6 @@ pub enum Object {
         z1: f32,
         k: f32,
         material: Material,
-        flip_normals: bool,
     },
     YZRect {
         y0: f32,
@@ -45,13 +43,17 @@ pub enum Object {
         z1: f32,
         k: f32,
         material: Material,
-        flip_normals: bool,
     },
     Sphere {
         center: Vector3,
         radius: f32,
         material: Material,
-        flip_normals: bool,
+    },
+    Cube {
+        pmin: Vector3,
+        pmax: Vector3,
+        material: Material,
+        faces: Box<Object>,
     },
     MovingSphere {
         center0: Vector3,
@@ -60,13 +62,21 @@ pub enum Object {
         time1: f32,
         radius: f32,
         material: Material,
-        flip_normals: bool,
     },
-    ObjectList {
-        list: Vec<Box<Object>>,
-    },
+    ObjectList(Vec<Box<Object>>),
     BvhTree {
         binary_tree: BinaryTree,
+        aabb: Aabb,
+    },
+    FlipNormals(Box<Object>),
+    Translate {
+        object: Box<Object>,
+        offset: Vector3,
+    },
+    RotateY {
+        object: Box<Object>,
+        sin_theta: f32,
+        cos_theta: f32,
         aabb: Aabb,
     },
 }
@@ -81,7 +91,6 @@ impl Object {
                 y1,
                 k,
                 material,
-                flip_normals,
             } => {
                 let ray_origin = r.origin();
                 let ray_direction = r.direction();
@@ -97,10 +106,7 @@ impl Object {
                 let u = (x - x0) / (x1 - x0);
                 let v = (y - y0) / (y1 - y0);
                 let p = r.point_at_parameter(t);
-                let mut normal = Vector3::new(0.0, 0.0, 1.0);
-                if *flip_normals {
-                    normal = -normal;
-                }
+                let normal = Vector3::new(0.0, 0.0, 1.0);
                 Some((HitRecord::new(u, v, t, p, normal), &material))
             }
             Object::XZRect {
@@ -110,7 +116,6 @@ impl Object {
                 z1,
                 k,
                 material,
-                flip_normals,
             } => {
                 let ray_origin = r.origin();
                 let ray_direction = r.direction();
@@ -126,10 +131,7 @@ impl Object {
                 let u = (x - x0) / (x1 - x0);
                 let v = (z - z0) / (z1 - z0);
                 let p = r.point_at_parameter(t);
-                let mut normal = Vector3::new(0.0, 1.0, 0.0);
-                if *flip_normals {
-                    normal = -normal;
-                }
+                let normal = Vector3::new(0.0, 1.0, 0.0);
                 Some((HitRecord::new(u, v, t, p, normal), &material))
             }
             Object::YZRect {
@@ -139,7 +141,6 @@ impl Object {
                 z1,
                 k,
                 material,
-                flip_normals,
             } => {
                 let ray_origin = r.origin();
                 let ray_direction = r.direction();
@@ -155,17 +156,13 @@ impl Object {
                 let u = (y - y0) / (y1 - y0);
                 let v = (z - z0) / (z1 - z0);
                 let p = r.point_at_parameter(t);
-                let mut normal = Vector3::new(1.0, 0.0, 0.0);
-                if *flip_normals {
-                    normal = -normal;
-                }
+                let normal = Vector3::new(1.0, 0.0, 0.0);
                 Some((HitRecord::new(u, v, t, p, normal), &material))
             }
             Object::Sphere {
                 center,
                 radius,
                 material,
-                flip_normals,
             } => {
                 let oc: Vector3 = r.origin() - *center;
                 let a: f32 = dot(r.direction(), r.direction());
@@ -177,10 +174,7 @@ impl Object {
                     if temp < t_max && temp > t_min {
                         let t = temp;
                         let p = r.point_at_parameter(t);
-                        let mut normal = (p - *center) / *radius;
-                        if *flip_normals {
-                            normal = -normal;
-                        }
+                        let normal = (p - *center) / *radius;
                         let (u, v) = get_sphere_uv(&((p - *center) / *radius));
                         return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
@@ -188,16 +182,19 @@ impl Object {
                     if temp < t_max && temp > t_min {
                         let t = temp;
                         let p = r.point_at_parameter(t);
-                        let mut normal = (p - *center) / *radius;
-                        if *flip_normals {
-                            normal = -normal;
-                        }
+                        let normal = (p - *center) / *radius;
                         let (u, v) = get_sphere_uv(&((p - *center) / *radius));
                         return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
                 }
                 None
             }
+            Object::Cube {
+                pmin,
+                pmax,
+                material,
+                faces,
+            } => faces.hit(r, t_min, t_max),
             Object::MovingSphere {
                 center0,
                 center1,
@@ -205,7 +202,6 @@ impl Object {
                 time1,
                 radius,
                 material,
-                flip_normals,
             } => {
                 let center = center_at_time(r.time, center0, center1, time0, time1);
                 let oc: Vector3 = r.origin() - center;
@@ -218,10 +214,7 @@ impl Object {
                     if temp < t_max && temp > t_min {
                         let t = temp;
                         let p = r.point_at_parameter(t);
-                        let mut normal = (p - center) / *radius;
-                        if *flip_normals {
-                            normal = -normal;
-                        }
+                        let normal = (p - center) / *radius;
                         let (u, v) = get_sphere_uv(&((p - center) / *radius));
                         return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
@@ -229,17 +222,14 @@ impl Object {
                     if temp < t_max && temp > t_min {
                         let t = temp;
                         let p = r.point_at_parameter(t);
-                        let mut normal = (p - center) / *radius;
-                        if *flip_normals {
-                            normal = -normal;
-                        }
+                        let normal = (p - center) / *radius;
                         let (u, v) = get_sphere_uv(&((p - center) / *radius));
                         return Some((HitRecord::new(u, v, t, p, normal), &material));
                     }
                 }
                 None
             }
-            Object::ObjectList { list } => {
+            Object::ObjectList(list) => {
                 let mut closest_so_far: f32 = t_max;
                 let mut hit_objects: Vec<(HitRecord, &Material)> = vec![];
 
@@ -292,6 +282,48 @@ impl Object {
                     }
                 }
             },
+            Object::FlipNormals(object) => match object.hit(r, t_min, t_max) {
+                Some((rec, mat)) => {
+                    Some((HitRecord::new(rec.u, rec.v, rec.t, rec.p, -rec.normal), mat))
+                }
+                None => None,
+            },
+            Object::Translate { object, offset } => {
+                let moved_ray: Ray = Ray::new(r.origin() - *offset, r.direction(), r.time);
+                match object.hit(&moved_ray, t_min, t_max) {
+                    Some((rec, mat)) => Some((
+                        HitRecord::new(rec.u, rec.v, rec.t, rec.p + *offset, rec.normal),
+                        mat,
+                    )),
+                    None => None,
+                }
+            }
+            Object::RotateY {
+                object,
+                sin_theta,
+                cos_theta,
+                aabb: _,
+            } => {
+                let mut origin = r.origin();
+                let mut direction = r.direction();
+                origin[0] = cos_theta * r.origin()[0] - sin_theta * r.origin()[2];
+                origin[2] = sin_theta * r.origin()[0] + cos_theta * r.origin()[2];
+                direction[0] = cos_theta * r.direction()[0] - sin_theta * r.direction()[2];
+                direction[2] = sin_theta * r.direction()[0] + cos_theta * r.direction()[2];
+                let rotated_r = Ray::new(origin, direction, r.time);
+                match object.hit(&rotated_r, t_min, t_max) {
+                    Some((rec, mat)) => {
+                        let mut p = rec.p;
+                        let mut normal = rec.normal;
+                        p[0] = cos_theta * rec.p[0] + sin_theta * rec.p[2];
+                        p[2] = -sin_theta * rec.p[0] + cos_theta * rec.p[2];
+                        normal[0] = cos_theta * rec.normal[0] + sin_theta * rec.normal[2];
+                        normal[2] = -sin_theta * rec.normal[0] + cos_theta * rec.normal[2];
+                        Some((HitRecord::new(rec.u, rec.v, rec.t, p, normal), mat))
+                    }
+                    None => None,
+                }
+            }
         }
     }
 
@@ -303,8 +335,7 @@ impl Object {
                 y0,
                 y1,
                 k,
-                material,
-                flip_normals,
+                material: _,
             } => Some(Aabb::new(
                 Vector3::new(*x0, *y0, k - 0.0001),
                 Vector3::new(*x1, *y1, k + 0.0001),
@@ -315,8 +346,7 @@ impl Object {
                 z0,
                 z1,
                 k,
-                material,
-                flip_normals,
+                material: _,
             } => Some(Aabb::new(
                 Vector3::new(*x0, k - 0.0001, *z0),
                 Vector3::new(*x1, k + 0.0001, *z1),
@@ -328,7 +358,6 @@ impl Object {
                 z1,
                 k,
                 material,
-                flip_normals,
             } => Some(Aabb::new(
                 Vector3::new(k - 0.0001, *y0, *z0),
                 Vector3::new(k + 0.0001, *y1, *z1),
@@ -337,11 +366,16 @@ impl Object {
                 center,
                 radius,
                 material: _,
-                flip_normals,
             } => Some(Aabb::new(
                 *center - Vector3::new(*radius, *radius, *radius),
                 *center + Vector3::new(*radius, *radius, *radius),
             )),
+            Object::Cube {
+                pmin,
+                pmax,
+                material: _,
+                faces: _,
+            } => Some(Aabb::new(*pmin, *pmax)),
             Object::MovingSphere {
                 center0,
                 center1,
@@ -349,7 +383,6 @@ impl Object {
                 time1: _,
                 radius,
                 material: _,
-                flip_normals,
             } => Some(surrounding_box(
                 &Aabb::new(
                     *center0 - Vector3::new(*radius, *radius, *radius),
@@ -360,7 +393,7 @@ impl Object {
                     *center1 + Vector3::new(*radius, *radius, *radius),
                 ),
             )),
-            Object::ObjectList { list } => {
+            Object::ObjectList(list) => {
                 if list.is_empty() {
                     return None;
                 }
@@ -386,6 +419,17 @@ impl Object {
             }
             Object::BvhTree {
                 binary_tree: _,
+                aabb,
+            } => Some(*aabb),
+            Object::FlipNormals(object) => object.bounding_box(t0, t1),
+            Object::Translate { object, offset } => match object.bounding_box(t0, t1) {
+                Some(aabb) => Some(Aabb::new(aabb.min + *offset, aabb.max + *offset)),
+                None => None,
+            },
+            Object::RotateY {
+                object: _,
+                sin_theta: _,
+                cos_theta: _,
                 aabb,
             } => Some(*aabb),
         }

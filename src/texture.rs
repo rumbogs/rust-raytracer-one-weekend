@@ -2,6 +2,7 @@ use super::perlin::Perlin;
 use super::vector3::Vector3;
 use image::{DynamicImage, GenericImageView};
 
+#[derive(Clone)]
 pub enum Texture {
     ConstantTexture {
         color: Vector3,

@@ -25,6 +25,7 @@ use object::Object;
 use perlin::Perlin;
 use ray::Ray;
 use texture::Texture;
+use utils::{create_cube, create_rotatey};
 use vector3::{unit_vector, Vector3};
 
 fn random_scene() -> Vec<Box<Object>> {
@@ -44,7 +45,6 @@ fn random_scene() -> Vec<Box<Object>> {
                 color: Vector3::new(0.7, 0.7, 0.7),
             },
         },
-        flip_normals: false,
     }));
     // object_list.push(Box::new(Object::Sphere {
     //     center: Vector3::new(0.0, 1.0, 0.0),
@@ -61,7 +61,6 @@ fn random_scene() -> Vec<Box<Object>> {
                 color: Vector3::new(4.0, 4.0, 4.0),
             },
         },
-        flip_normals: false,
     }));
     let img = image::open("pug.jpg").unwrap();
     let (nx, ny) = img.dimensions();
@@ -72,8 +71,13 @@ fn random_scene() -> Vec<Box<Object>> {
         material: Material::Lambertian {
             albedo: Texture::ImageTexture { img },
         },
-        flip_normals: false,
     }));
+
+    let light = Material::DiffuseLight {
+        emit: Texture::ConstantTexture {
+            color: Vector3::new(4.0, 4.0, 4.0),
+        },
+    };
 
     object_list.push(Box::new(Object::XYRect {
         x0: -2.0,
@@ -81,12 +85,7 @@ fn random_scene() -> Vec<Box<Object>> {
         y0: 1.0,
         y1: 3.0,
         k: -3.0,
-        material: Material::DiffuseLight {
-            emit: Texture::ConstantTexture {
-                color: Vector3::new(4.0, 4.0, 4.0),
-            },
-        },
-        flip_normals: false,
+        material: light,
     }));
 
     object_list
@@ -105,16 +104,6 @@ fn cornell_box() -> Vec<Box<Object>> {
             color: Vector3::new(0.73, 0.73, 0.73),
         },
     };
-    let white2: Material = Material::Lambertian {
-        albedo: Texture::ConstantTexture {
-            color: Vector3::new(0.73, 0.73, 0.73),
-        },
-    };
-    let white3: Material = Material::Lambertian {
-        albedo: Texture::ConstantTexture {
-            color: Vector3::new(0.73, 0.73, 0.73),
-        },
-    };
     let green: Material = Material::Lambertian {
         albedo: Texture::ConstantTexture {
             color: Vector3::new(0.12, 0.45, 0.15),
@@ -126,15 +115,14 @@ fn cornell_box() -> Vec<Box<Object>> {
         },
     };
 
-    object_list.push(Box::new(Object::YZRect {
+    object_list.push(Box::new(Object::FlipNormals(Box::new(Object::YZRect {
         y0: 0.0,
         y1: 555.0,
         z0: 0.0,
         z1: 555.0,
         k: 555.0,
         material: green,
-        flip_normals: true,
-    }));
+    }))));
     object_list.push(Box::new(Object::YZRect {
         y0: 0.0,
         y1: 555.0,
@@ -142,7 +130,6 @@ fn cornell_box() -> Vec<Box<Object>> {
         z1: 555.0,
         k: 0.0,
         material: red,
-        flip_normals: false,
     }));
     object_list.push(Box::new(Object::XZRect {
         x0: 213.0,
@@ -151,34 +138,52 @@ fn cornell_box() -> Vec<Box<Object>> {
         z1: 332.0,
         k: 554.0,
         material: light,
-        flip_normals: false,
     }));
-    object_list.push(Box::new(Object::XZRect {
+    object_list.push(Box::new(Object::FlipNormals(Box::new(Object::XZRect {
         x0: 0.0,
         x1: 555.0,
         z0: 0.0,
         z1: 555.0,
         k: 555.0,
-        material: white,
-        flip_normals: true,
-    }));
+        material: white.clone(),
+    }))));
     object_list.push(Box::new(Object::XZRect {
         x0: 0.0,
         x1: 555.0,
         z0: 0.0,
         z1: 555.0,
         k: 0.0,
-        material: white2,
-        flip_normals: false,
+        material: white.clone(),
     }));
-    object_list.push(Box::new(Object::XYRect {
+    object_list.push(Box::new(Object::FlipNormals(Box::new(Object::XYRect {
         x0: 0.0,
         x1: 555.0,
         y0: 0.0,
         y1: 555.0,
         k: 555.0,
-        material: white3,
-        flip_normals: true,
+        material: white.clone(),
+    }))));
+    object_list.push(Box::new(Object::Translate {
+        object: Box::new(create_rotatey(
+            create_cube(
+                Vector3::new(0.0, 0.0, 0.0),
+                Vector3::new(165.0, 165.0, 165.0),
+                white.clone(),
+            ),
+            -18.0,
+        )),
+        offset: Vector3::new(130.0, 0.0, 65.0),
+    }));
+    object_list.push(Box::new(Object::Translate {
+        object: Box::new(create_rotatey(
+            create_cube(
+                Vector3::new(0.0, 0.0, 0.0),
+                Vector3::new(165.0, 330.0, 165.0),
+                white.clone(),
+            ),
+            15.0,
+        )),
+        offset: Vector3::new(265.0, 0.0, 295.0),
     }));
     object_list
 }
@@ -213,7 +218,6 @@ fn random_scene2() -> Vec<Box<Object>> {
                                 ),
                             },
                         },
-                        flip_normals: false,
                     }));
                 } else if choose_mat < 0.95 {
                     object_list.push(Box::new(Object::Sphere {
@@ -229,14 +233,12 @@ fn random_scene2() -> Vec<Box<Object>> {
                             },
                             fuzz: 0.5 * rng.gen::<f32>(),
                         },
-                        flip_normals: false,
                     }));
                 } else {
                     object_list.push(Box::new(Object::Sphere {
                         center,
                         radius: 0.2,
                         material: Material::Dielectric { ref_idx: 1.5 },
-                        flip_normals: false,
                     }));
                 }
             }
@@ -321,7 +323,7 @@ fn main() {
     let mut scene = cornell_box();
     // let balls = random_scene2();
     // scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
-    let world = &Object::ObjectList { list: scene };
+    let world = &Object::ObjectList(scene);
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
     let rows: Vec<&mut [Vector3]> = pixels.chunks_mut(thread_rows * width).collect();
