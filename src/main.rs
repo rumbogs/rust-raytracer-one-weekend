@@ -8,38 +8,42 @@ use rand::Rng;
 use std::time::Instant;
 
 mod aabb;
-mod binary_tree;
 mod camera;
-mod material;
 mod hittable;
+mod material;
+mod modifiers;
+mod objects;
 mod perlin;
 mod ray;
 mod texture;
-mod utils;
 mod vector3;
-mod objects;
-mod modifiers;
 
-use binary_tree::create_binary_tree;
 use camera::Camera;
-use material::Material;
 use hittable::Hittable;
+use material::Material;
+use modifiers::flip_normals::FlipNormals;
+use modifiers::rotate::RotateY;
+use modifiers::translate::Translate;
+use objects::cube::Cube;
+use objects::moving_sphere::MovingSphere;
+use objects::object_list::ObjectList;
+use objects::plane::{XYRect, XZRect, YZRect};
+use objects::sphere::Sphere;
 use perlin::Perlin;
 use ray::Ray;
 use texture::Texture;
-use utils::{create_cube, create_rotatey};
 use vector3::{unit_vector, Vector3};
 
-fn random_scene() -> Vec<Box<Object>> {
+fn random_scene() -> Vec<Box<Hittable>> {
     let n: usize = 500;
-    let mut object_list: Vec<Box<Object>> = Vec::with_capacity(n + 1);
+    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
     let light_material = Material::DiffuseLight {
         emit: Texture::ConstantTexture {
             color: Vector3::new(4.0, 4.0, 4.0),
         },
     };
 
-    object_list.push(Box::new(Object::Sphere {
+    object_list.push(Box::new(Sphere {
         center: Vector3::new(0.0, -1000.0, 0.0),
         radius: 1000.0,
         material: Material::Lambertian {
@@ -48,14 +52,14 @@ fn random_scene() -> Vec<Box<Object>> {
             },
         },
     }));
-    // object_list.push(Box::new(Object::Sphere {
+    // object_list.push(Box::new(Sphere {
     //     center: Vector3::new(0.0, 1.0, 0.0),
     //     radius: 1.0,
     //     material: Material::Lambertian {
     //         albedo: Texture::NoiseTexture { noise: Perlin::new(), scale: 5.0 },
     //     },
     // }));
-    object_list.push(Box::new(Object::Sphere {
+    object_list.push(Box::new(Sphere {
         center: Vector3::new(3.0, 1.0, 3.0),
         radius: 1.0,
         material: Material::DiffuseLight {
@@ -67,7 +71,7 @@ fn random_scene() -> Vec<Box<Object>> {
     let img = image::open("pug.jpg").unwrap();
     let (nx, ny) = img.dimensions();
 
-    object_list.push(Box::new(Object::Sphere {
+    object_list.push(Box::new(Sphere {
         center: Vector3::new(0.0, 1.0, 0.0),
         radius: 1.0,
         material: Material::Lambertian {
@@ -81,7 +85,7 @@ fn random_scene() -> Vec<Box<Object>> {
         },
     };
 
-    object_list.push(Box::new(Object::XYRect {
+    object_list.push(Box::new(XYRect {
         x0: -2.0,
         x1: 2.0,
         y0: 1.0,
@@ -93,9 +97,9 @@ fn random_scene() -> Vec<Box<Object>> {
     object_list
 }
 
-fn cornell_box() -> Vec<Box<Object>> {
+fn cornell_box() -> Vec<Box<Hittable>> {
     let n: usize = 500;
-    let mut object_list: Vec<Box<Object>> = Vec::with_capacity(n + 1);
+    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
     let red: Material = Material::Lambertian {
         albedo: Texture::ConstantTexture {
             color: Vector3::new(0.65, 0.05, 0.05),
@@ -117,7 +121,7 @@ fn cornell_box() -> Vec<Box<Object>> {
         },
     };
 
-    object_list.push(Box::new(Object::FlipNormals(Box::new(Object::YZRect {
+    object_list.push(Box::new(FlipNormals::new(Box::new(YZRect {
         y0: 0.0,
         y1: 555.0,
         z0: 0.0,
@@ -125,7 +129,7 @@ fn cornell_box() -> Vec<Box<Object>> {
         k: 555.0,
         material: green,
     }))));
-    object_list.push(Box::new(Object::YZRect {
+    object_list.push(Box::new(YZRect {
         y0: 0.0,
         y1: 555.0,
         z0: 0.0,
@@ -133,7 +137,7 @@ fn cornell_box() -> Vec<Box<Object>> {
         k: 0.0,
         material: red,
     }));
-    object_list.push(Box::new(Object::XZRect {
+    object_list.push(Box::new(XZRect {
         x0: 213.0,
         x1: 343.0,
         z0: 227.0,
@@ -141,7 +145,7 @@ fn cornell_box() -> Vec<Box<Object>> {
         k: 554.0,
         material: light,
     }));
-    object_list.push(Box::new(Object::FlipNormals(Box::new(Object::XZRect {
+    object_list.push(Box::new(FlipNormals::new(Box::new(XZRect {
         x0: 0.0,
         x1: 555.0,
         z0: 0.0,
@@ -149,7 +153,7 @@ fn cornell_box() -> Vec<Box<Object>> {
         k: 555.0,
         material: white.clone(),
     }))));
-    object_list.push(Box::new(Object::XZRect {
+    object_list.push(Box::new(XZRect {
         x0: 0.0,
         x1: 555.0,
         z0: 0.0,
@@ -157,7 +161,7 @@ fn cornell_box() -> Vec<Box<Object>> {
         k: 0.0,
         material: white.clone(),
     }));
-    object_list.push(Box::new(Object::FlipNormals(Box::new(Object::XYRect {
+    object_list.push(Box::new(FlipNormals::new(Box::new(XYRect {
         x0: 0.0,
         x1: 555.0,
         y0: 0.0,
@@ -165,24 +169,24 @@ fn cornell_box() -> Vec<Box<Object>> {
         k: 555.0,
         material: white.clone(),
     }))));
-    object_list.push(Box::new(Object::Translate {
-        object: Box::new(create_rotatey(
-            create_cube(
+    object_list.push(Box::new(Translate {
+        object: Box::new(RotateY::new(
+            Box::new(Cube::new(
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(165.0, 165.0, 165.0),
                 white.clone(),
-            ),
+            )),
             -18.0,
         )),
         offset: Vector3::new(130.0, 0.0, 65.0),
     }));
-    object_list.push(Box::new(Object::Translate {
-        object: Box::new(create_rotatey(
-            create_cube(
+    object_list.push(Box::new(Translate {
+        object: Box::new(RotateY::new(
+            Box::new(Cube::new(
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(165.0, 330.0, 165.0),
                 white.clone(),
-            ),
+            )),
             15.0,
         )),
         offset: Vector3::new(265.0, 0.0, 295.0),
@@ -190,9 +194,9 @@ fn cornell_box() -> Vec<Box<Object>> {
     object_list
 }
 
-fn random_scene2() -> Vec<Box<Object>> {
+fn random_scene2() -> Vec<Box<Hittable>> {
     let n: usize = 500;
-    let mut object_list: Vec<Box<Object>> = Vec::with_capacity(n + 1);
+    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
     let mut rng = rand::thread_rng();
 
     for a in -10..10 {
@@ -205,7 +209,7 @@ fn random_scene2() -> Vec<Box<Object>> {
             );
             if (center - Vector3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    object_list.push(Box::new(Object::MovingSphere {
+                    object_list.push(Box::new(MovingSphere {
                         center0: center,
                         center1: center + Vector3::new(0.0, 0.5 * rng.gen::<f32>(), 0.0),
                         time0: 0.0,
@@ -222,7 +226,7 @@ fn random_scene2() -> Vec<Box<Object>> {
                         },
                     }));
                 } else if choose_mat < 0.95 {
-                    object_list.push(Box::new(Object::Sphere {
+                    object_list.push(Box::new(Sphere {
                         center,
                         radius: 0.2,
                         material: Material::Metal {
@@ -237,7 +241,7 @@ fn random_scene2() -> Vec<Box<Object>> {
                         },
                     }));
                 } else {
-                    object_list.push(Box::new(Object::Sphere {
+                    object_list.push(Box::new(Sphere {
                         center,
                         radius: 0.2,
                         material: Material::Dielectric { ref_idx: 1.5 },
@@ -262,7 +266,7 @@ fn random_in_unit_sphere() -> Vector3 {
     p
 }
 
-fn color(r: &Ray, world: &Object, depth: usize) -> Vector3 {
+fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
     // some of the rays hit at 0.00000001 instead of 0.0
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
@@ -325,7 +329,7 @@ fn main() {
     let mut scene = cornell_box();
     // let balls = random_scene2();
     // scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
-    let world = &Object::ObjectList(scene);
+    let world = &ObjectList::new(scene);
 
     let mut pixels = vec![Vector3::new(0.0, 0.0, 0.0); width * height];
     let rows: Vec<&mut [Vector3]> = pixels.chunks_mut(thread_rows * width).collect();

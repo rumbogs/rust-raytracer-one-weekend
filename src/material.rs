@@ -1,4 +1,4 @@
-use super::object::HitRecord;
+use super::hittable::HitRecord;
 use super::random_in_unit_sphere;
 use super::ray::Ray;
 use super::texture::Texture;
