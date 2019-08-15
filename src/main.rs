@@ -24,6 +24,7 @@ use material::Material;
 use modifiers::flip_normals::FlipNormals;
 use modifiers::rotate::RotateY;
 use modifiers::translate::Translate;
+use objects::constant_medium::ConstantMedium;
 use objects::cube::Cube;
 use objects::moving_sphere::MovingSphere;
 use objects::object_list::ObjectList;
@@ -194,6 +195,117 @@ fn cornell_box() -> Vec<Box<Hittable>> {
     object_list
 }
 
+fn cornell_smoke() -> Vec<Box<Hittable>> {
+    let n: usize = 500;
+    let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
+    let red: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.65, 0.05, 0.05),
+        },
+    };
+    let white: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.73, 0.73, 0.73),
+        },
+    };
+    let green: Material = Material::Lambertian {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.12, 0.45, 0.15),
+        },
+    };
+    let light: Material = Material::DiffuseLight {
+        emit: Texture::ConstantTexture {
+            color: Vector3::new(7.0, 7.0, 7.0),
+        },
+    };
+
+    object_list.push(Box::new(FlipNormals::new(Box::new(YZRect {
+        y0: 0.0,
+        y1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 555.0,
+        material: green,
+    }))));
+    object_list.push(Box::new(YZRect {
+        y0: 0.0,
+        y1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 0.0,
+        material: red,
+    }));
+    object_list.push(Box::new(XZRect {
+        x0: 113.0,
+        x1: 443.0,
+        z0: 127.0,
+        z1: 432.0,
+        k: 554.0,
+        material: light,
+    }));
+    object_list.push(Box::new(FlipNormals::new(Box::new(XZRect {
+        x0: 0.0,
+        x1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 555.0,
+        material: white.clone(),
+    }))));
+    object_list.push(Box::new(XZRect {
+        x0: 0.0,
+        x1: 555.0,
+        z0: 0.0,
+        z1: 555.0,
+        k: 0.0,
+        material: white.clone(),
+    }));
+    object_list.push(Box::new(FlipNormals::new(Box::new(XYRect {
+        x0: 0.0,
+        x1: 555.0,
+        y0: 0.0,
+        y1: 555.0,
+        k: 555.0,
+        material: white.clone(),
+    }))));
+    let box1: Translate = Translate {
+        object: Box::new(RotateY::new(
+            Box::new(Cube::new(
+                Vector3::new(0.0, 0.0, 0.0),
+                Vector3::new(165.0, 165.0, 165.0),
+                white.clone(),
+            )),
+            -18.0,
+        )),
+        offset: Vector3::new(130.0, 0.0, 65.0),
+    };
+    let box2: Translate = Translate {
+        object: Box::new(RotateY::new(
+            Box::new(Cube::new(
+                Vector3::new(0.0, 0.0, 0.0),
+                Vector3::new(165.0, 330.0, 165.0),
+                white.clone(),
+            )),
+            15.0,
+        )),
+        offset: Vector3::new(265.0, 0.0, 295.0),
+    };
+    object_list.push(Box::new(ConstantMedium::new(
+        Box::new(box1),
+        0.01,
+        Texture::ConstantTexture {
+            color: Vector3::new(1.0, 1.0, 1.0),
+        },
+    )));
+    object_list.push(Box::new(ConstantMedium::new(
+        Box::new(box2),
+        0.01,
+        Texture::ConstantTexture {
+            color: Vector3::new(0.0, 0.0, 0.0),
+        },
+    )));
+    object_list
+}
+
 fn random_scene2() -> Vec<Box<Hittable>> {
     let n: usize = 500;
     let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
@@ -325,8 +437,7 @@ fn main() {
         1.0,
     );
 
-    // TODO: why is this taking longer :(
-    let mut scene = cornell_box();
+    let mut scene = cornell_smoke();
     // let balls = random_scene2();
     // scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
     let world = &ObjectList::new(scene);

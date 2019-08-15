@@ -35,6 +35,7 @@ pub enum Material {
     Metal { albedo: Texture, fuzz: f32 },
     Dielectric { ref_idx: f32 },
     DiffuseLight { emit: Texture },
+    Isotropic { texture: Texture }
 }
 
 impl Material {
@@ -99,6 +100,13 @@ impl Material {
                 }
 
                 Some((attenuation, scattered))
+            }
+            Material::Isotropic { texture } => {
+                let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
+                Some((
+                    texture.value(rec.u, rec.v, &rec.p),
+                    Ray::new(rec.p, random_in_unit_sphere(), r_in.time),
+                ))
             }
             _ => None
         }
