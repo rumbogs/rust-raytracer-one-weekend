@@ -5,6 +5,8 @@ use super::super::hittable::{HitRecord, Hittable};
 use super::super::material::Material;
 use super::super::ray::Ray;
 use super::super::vector3::{dot, Vector3};
+use super::super::onb::ONB;
+use super::super::random_to_sphere;
 
 pub struct Sphere {
     pub center: Vector3,
@@ -52,5 +54,21 @@ impl Hittable for Sphere {
             self.center - Vector3::new(self.radius, self.radius, self.radius),
             self.center + Vector3::new(self.radius, self.radius, self.radius),
         ))
+    }
+    fn pdf_value(&self, o: Vector3, v: Vector3) -> f32 {
+        match self.hit(&Ray::new(o, v, 0.0), 0.001, std::f32::MAX) {
+            Some((rec, material)) => {
+                let cos_theta_max: f32 = (1.0 - self.radius.powf(2.0) / (self.center - o).squared_length()).sqrt();
+                let solid_angle: f32 = 2.0 * PI * (1.0 - cos_theta_max);
+                1.0 / solid_angle
+            },
+            None => 0.0
+        }
+    }
+    fn random(&self, o: Vector3) -> Vector3 {
+        let direction = self.center - o;
+        let distance_squared: f32 = direction.squared_length();
+        let uvw: ONB = ONB::new(direction);
+        uvw.local_vec(&random_to_sphere(self.radius, distance_squared))
     }
 }

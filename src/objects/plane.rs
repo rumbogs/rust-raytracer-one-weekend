@@ -1,8 +1,10 @@
-use super::super::hittable::{Hittable, HitRecord};
-use super::super::material::Material;
-use super::super::vector3::Vector3;
+use rand::Rng;
+
 use super::super::aabb::Aabb;
+use super::super::hittable::{HitRecord, Hittable};
+use super::super::material::Material;
 use super::super::ray::Ray;
+use super::super::vector3::{dot, Vector3};
 
 pub struct XYRect {
     pub x0: f32,
@@ -80,6 +82,26 @@ impl Hittable for XZRect {
             Vector3::new(self.x0, self.k - 0.0001, self.z0),
             Vector3::new(self.x1, self.k + 0.0001, self.z1),
         ))
+    }
+    fn pdf_value(&self, o: Vector3, v: Vector3) -> f32 {
+        match self.hit(&Ray::new(o, v, 0.0), 0.001, std::f32::MAX) {
+            Some((rec, _material)) => {
+                let area: f32 = (self.x1 - self.x0) * (self.z1 - self.z0);
+                let distance_squared = rec.t * rec.t * v.squared_length();
+                let cosine = (dot(v, rec.normal) / v.length()).abs();
+                distance_squared / (cosine * area)
+            }
+            None => 0.0,
+        }
+    }
+    fn random(&self, o: Vector3) -> Vector3 {
+        let mut rng = rand::thread_rng();
+        let random_point: Vector3 = Vector3::new(
+            self.x0 + rng.gen::<f32>() * (self.x1 - self.x0),
+            self.k,
+            self.z0 + rng.gen::<f32>() * (self.z1 - self.z0),
+        );
+        random_point - o
     }
 }
 

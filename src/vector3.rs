@@ -38,7 +38,7 @@ impl Vector3 {
     self.e[0] * self.e[0] + self.e[1] * self.e[1] + self.e[2] * self.e[2]
   }
 
-  fn make_unit_vector(&mut self) {
+  pub fn make_unit_vector(&mut self) {
     let k: f32 = 1.0 / (self.e[0] * self.e[0] + self.e[1] * self.e[1] + self.e[2] * self.e[2]);
     self.e[0] *= k;
     self.e[1] *= k;
