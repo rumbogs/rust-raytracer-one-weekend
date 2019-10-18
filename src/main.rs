@@ -5,7 +5,6 @@ extern crate rand;
 
 use image::GenericImageView;
 use rand::Rng;
-use std::f32::consts;
 use std::time::Instant;
 
 mod aabb;
@@ -19,11 +18,12 @@ mod pdf;
 mod perlin;
 mod ray;
 mod texture;
+mod utils;
 mod vector3;
 
 use camera::Camera;
 use hittable::Hittable;
-use material::{Material, ScatterRecord};
+use material::Material;
 use modifiers::flip_normals::FlipNormals;
 use modifiers::rotate::RotateY;
 use modifiers::translate::Translate;
@@ -34,11 +34,12 @@ use objects::moving_sphere::MovingSphere;
 use objects::object_list::ObjectList;
 use objects::plane::{XYRect, XZRect, YZRect};
 use objects::sphere::Sphere;
-use pdf::{CosinePDF, HittablePDF, MixturePDF, PDF};
+use pdf::{HittablePDF, MixturePDF, PDF};
 use perlin::Perlin;
 use ray::Ray;
 use texture::Texture;
-use vector3::{dot, unit_vector, Vector3};
+use utils::{clamp, de_nan, random_cosine_direction, random_on_unit_sphere, random_to_sphere};
+use vector3::Vector3;
 
 fn random_scene() -> Vec<Box<Hittable>> {
     let n: usize = 500;
@@ -546,67 +547,6 @@ fn final_scene() -> Vec<Box<Hittable>> {
     list
 }
 
-fn random_on_unit_sphere() -> Vector3 {
-    let mut p: Vector3;
-    loop {
-        let mut rng = rand::thread_rng();
-        p = 2.0 * Vector3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>())
-            - Vector3::new(1.0, 1.0, 1.0); // -1 -> 1
-        if p.squared_length() < 1.0 {
-            break;
-        }
-    }
-    unit_vector(p)
-}
-fn random_in_unit_sphere() -> Vector3 {
-    let mut p: Vector3;
-    loop {
-        let mut rng = rand::thread_rng();
-        p = 2.0 * Vector3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>())
-            - Vector3::new(1.0, 1.0, 1.0); // -1 -> 1
-        if p.squared_length() < 1.0 {
-            break;
-        }
-    }
-    p
-}
-
-fn random_cosine_direction() -> Vector3 {
-    let mut rng = rand::thread_rng();
-    let r1 = rng.gen::<f32>();
-    let r2 = rng.gen::<f32>();
-    let z = (1.0 - r2).sqrt();
-    let phi = 2.0 * consts::PI * r1;
-    let x = phi.cos() * 2.0 * r2.sqrt();
-    let y = phi.sin() * 2.0 * r2.sqrt();
-    Vector3::new(x, y, z)
-}
-
-fn random_to_sphere(radius: f32, distance_squared: f32) -> Vector3 {
-    let mut rng = rand::thread_rng();
-    let r1 = rng.gen::<f32>();
-    let r2 = rng.gen::<f32>();
-    let z = 1.0 + r2 * ((1.0 - radius.powf(2.0) / distance_squared).sqrt() - 1.0);
-    let phi = 2.0 * consts::PI * r1;
-    let x = phi.cos() * (1.0 - z.powf(2.0)).sqrt();
-    let y = phi.sin() * (1.0 - z.powf(2.0)).sqrt();
-    Vector3::new(x, y, z)
-}
-
-fn de_nan(c: Vector3) -> Vector3 {
-    let mut temp = c;
-    if (!(temp[0] == temp[0])) {
-        temp[0] = 0.0;
-    }
-    if (!(temp[1] == temp[1])) {
-        temp[1] = 0.0;
-    }
-    if (!(temp[2] == temp[2])) {
-        temp[2] = 0.0;
-    }
-    temp
-}
-
 fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
     // some of the rays hit at 0.00000001 instead of 0.0
     // so ignore those to remove noise
@@ -736,7 +676,6 @@ fn main() {
                         // also subtract one because the for loop isn't inclusive
                         // on the right hand side
                         let inverted_y = thread_rows - y - 1;
-                        // println!("{}", i);
 
                         let inverted_row = ((cpu_num - i - 1) * thread_rows + inverted_y) as f32;
                         let mut rng = rand::thread_rng();
@@ -753,14 +692,15 @@ fn main() {
                         col /= smoothness as f32;
                         // remove the gamma of 2 from the color (raise to power of 1/2)
                         col = Vector3::new(col[0].sqrt(), col[1].sqrt(), col[2].sqrt());
-                        let ir = (255.99 * &col[0]) as u8;
-                        let ig = (255.99 * &col[1]) as u8;
-                        let ib = (255.99 * &col[2]) as u8;
+                        let ir = clamp(255.99 * &col[0], 0.0, 255.99);
+                        let ig = clamp(255.99 * &col[1], 0.0, 255.99);
+                        let ib = clamp(255.99 * &col[2], 0.0, 255.99);
+
                         // save buffer values
                         let buffer_pos = y * width + x;
-                        row[buffer_pos][0] = ir as f32;
-                        row[buffer_pos][1] = ig as f32;
-                        row[buffer_pos][2] = ib as f32;
+                        row[buffer_pos][0] = ir;
+                        row[buffer_pos][1] = ig;
+                        row[buffer_pos][2] = ib;
                     }
                 }
             });

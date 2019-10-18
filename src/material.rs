@@ -1,9 +1,9 @@
 use super::hittable::HitRecord;
 use super::onb::ONB;
+use super::pdf::{CosinePDF, PDF};
 use super::ray::Ray;
 use super::texture::Texture;
 use super::vector3::{dot, unit_vector, Vector3};
-use super::pdf::{CosinePDF, PDF};
 use super::{random_cosine_direction, random_on_unit_sphere};
 use std::f32::consts;
 
@@ -59,7 +59,7 @@ impl Material {
                     specular_ray: None,
                     is_specular: false,
                     attenuation: albedo.value(rec.u, rec.v, &rec.p),
-                    pdf: Some(Box::new(CosinePDF::new(rec.normal)))
+                    pdf: Some(Box::new(CosinePDF::new(rec.normal))),
                 })
             }
             Material::Metal { albedo, fuzz } => {
@@ -72,7 +72,7 @@ impl Material {
                 if dot(scattered.direction(), rec.normal) > 0.0 {
                     Some(ScatterRecord {
                         attenuation: albedo.value(rec.u, rec.v, &rec.p),
-                        specular_ray: Some(scattered), 
+                        specular_ray: Some(scattered),
                         is_specular: true,
                         pdf: None,
                     })
@@ -118,16 +118,16 @@ impl Material {
                     scattered = Ray::new(rec.p, saved_refracted, 0.0);
                 }
 
-                Some(ScatterRecord{
+                Some(ScatterRecord {
                     attenuation,
                     specular_ray: Some(scattered),
                     is_specular: true,
-                    pdf: None
+                    pdf: None,
                 })
             }
             Material::Isotropic { texture } => {
                 let target: Vector3 = rec.p + rec.normal + random_on_unit_sphere();
-                Some(ScatterRecord{
+                Some(ScatterRecord {
                     attenuation: texture.value(rec.u, rec.v, &rec.p),
                     specular_ray: Some(Ray::new(rec.p, random_on_unit_sphere(), r_in.time)),
                     is_specular: true,
@@ -165,7 +165,7 @@ impl Material {
                 } else {
                     Vector3::new(0.0, 0.0, 0.0)
                 }
-            },
+            }
             _ => Vector3::new(0.0, 0.0, 0.0),
         }
     }
