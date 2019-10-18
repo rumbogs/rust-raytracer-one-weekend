@@ -1,8 +1,11 @@
 use super::hittable::HitRecord;
-use super::random_in_unit_sphere;
+use super::onb::ONB;
+use super::pdf::{CosinePDF, PDF};
 use super::ray::Ray;
 use super::texture::Texture;
 use super::vector3::{dot, unit_vector, Vector3};
+use super::{random_cosine_direction, random_on_unit_sphere};
+use std::f32::consts;
 
 use rand::Rng;
 
@@ -28,6 +31,12 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
 }
 
+pub struct ScatterRecord {
+    pub specular_ray: Option<Ray>,
+    pub is_specular: bool,
+    pub attenuation: Vector3,
+    pub pdf: Option<Box<PDF>>,
+}
 
 #[derive(Clone)]
 pub enum Material {
@@ -35,18 +44,23 @@ pub enum Material {
     Metal { albedo: Texture, fuzz: f32 },
     Dielectric { ref_idx: f32 },
     DiffuseLight { emit: Texture },
-    Isotropic { texture: Texture }
+    Isotropic { texture: Texture },
 }
 
 impl Material {
-    pub fn scatter(&self, r_in: &Ray, rec: HitRecord) -> Option<(Vector3, Ray)> {
+    pub fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
         match self {
             Material::Lambertian { albedo } => {
-                let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
-                Some((
-                    albedo.value(rec.u, rec.v, &rec.p),
-                    Ray::new(rec.p, target - rec.p, r_in.time),
-                ))
+                let uvw: ONB = ONB::new(rec.normal);
+                let direction: Vector3 = uvw.local_vec(&random_cosine_direction());
+                let scattered: Ray = Ray::new(rec.p, unit_vector(direction), r_in.time);
+                let scattered_direction = scattered.direction();
+                Some(ScatterRecord {
+                    specular_ray: None,
+                    is_specular: false,
+                    attenuation: albedo.value(rec.u, rec.v, &rec.p),
+                    pdf: Some(Box::new(CosinePDF::new(rec.normal))),
+                })
             }
             Material::Metal { albedo, fuzz } => {
                 let mut fuzz = *fuzz;
@@ -54,9 +68,14 @@ impl Material {
                     fuzz = 1.0;
                 }
                 let reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-                let scattered = Ray::new(rec.p, reflected + fuzz * random_in_unit_sphere(), 0.0);
+                let scattered = Ray::new(rec.p, reflected + fuzz * random_on_unit_sphere(), 0.0);
                 if dot(scattered.direction(), rec.normal) > 0.0 {
-                    Some((albedo.value(rec.u, rec.v, &rec.p), scattered))
+                    Some(ScatterRecord {
+                        attenuation: albedo.value(rec.u, rec.v, &rec.p),
+                        specular_ray: Some(scattered),
+                        is_specular: true,
+                        pdf: None,
+                    })
                 } else {
                     None
                 }
@@ -99,27 +118,55 @@ impl Material {
                     scattered = Ray::new(rec.p, saved_refracted, 0.0);
                 }
 
-                Some((attenuation, scattered))
+                Some(ScatterRecord {
+                    attenuation,
+                    specular_ray: Some(scattered),
+                    is_specular: true,
+                    pdf: None,
+                })
             }
             Material::Isotropic { texture } => {
-                let target: Vector3 = rec.p + rec.normal + random_in_unit_sphere();
-                Some((
-                    texture.value(rec.u, rec.v, &rec.p),
-                    Ray::new(rec.p, random_in_unit_sphere(), r_in.time),
-                ))
+                let target: Vector3 = rec.p + rec.normal + random_on_unit_sphere();
+                Some(ScatterRecord {
+                    attenuation: texture.value(rec.u, rec.v, &rec.p),
+                    specular_ray: Some(Ray::new(rec.p, random_on_unit_sphere(), r_in.time)),
+                    is_specular: true,
+                    pdf: None,
+                })
             }
-            _ => None
+            _ => None,
         }
     }
 
-    pub fn emitted(&self, u: f32, v: f32, p: &Vector3) -> Vector3 {
+    pub fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f32 {
+        match self {
+            Material::Lambertian { albedo } => {
+                let mut cosine: f32 = dot(rec.normal, unit_vector(scattered.direction()));
+                if cosine < 0.0 {
+                    cosine = 0.0;
+                }
+                cosine / consts::PI
+            }
+            // Material::Metal { albedo, fuzz } => {
+            // }
+            // Material::Dielectric { ref_idx } => {
+            // }
+            // Material::Isotropic { texture } => {
+            // }
+            _ => 0.0,
+        }
+    }
+
+    pub fn emitted(&self, r_in: &Ray, rec: &HitRecord, u: f32, v: f32, p: &Vector3) -> Vector3 {
         match self {
             Material::DiffuseLight { emit } => {
-                emit.value(u, v, p)
+                if dot(rec.normal, r_in.direction()) < 0.0 {
+                    emit.value(u, v, p)
+                } else {
+                    Vector3::new(0.0, 0.0, 0.0)
+                }
             }
-            _ => {
-                Vector3::new(0.0, 0.0, 0.0)
-            }
+            _ => Vector3::new(0.0, 0.0, 0.0),
         }
     }
 }

@@ -13,9 +13,12 @@ mod hittable;
 mod material;
 mod modifiers;
 mod objects;
+mod onb;
+mod pdf;
 mod perlin;
 mod ray;
 mod texture;
+mod utils;
 mod vector3;
 
 use camera::Camera;
@@ -31,10 +34,12 @@ use objects::moving_sphere::MovingSphere;
 use objects::object_list::ObjectList;
 use objects::plane::{XYRect, XZRect, YZRect};
 use objects::sphere::Sphere;
+use pdf::{HittablePDF, MixturePDF, PDF};
 use perlin::Perlin;
 use ray::Ray;
 use texture::Texture;
-use vector3::{unit_vector, Vector3};
+use utils::{clamp, de_nan, random_cosine_direction, random_on_unit_sphere, random_to_sphere};
+use vector3::Vector3;
 
 fn random_scene() -> Vec<Box<Hittable>> {
     let n: usize = 500;
@@ -99,7 +104,7 @@ fn random_scene() -> Vec<Box<Hittable>> {
     object_list
 }
 
-fn cornell_box() -> Vec<Box<Hittable>> {
+fn cornell_box(aspect: f32) -> (Vec<Box<Hittable>>, Camera) {
     let n: usize = 500;
     let mut object_list: Vec<Box<Hittable>> = Vec::with_capacity(n + 1);
     let red: Material = Material::Lambertian {
@@ -122,6 +127,12 @@ fn cornell_box() -> Vec<Box<Hittable>> {
             color: Vector3::new(15.0, 15.0, 15.0),
         },
     };
+    let aluminium: Material = Material::Metal {
+        albedo: Texture::ConstantTexture {
+            color: Vector3::new(0.8, 0.85, 0.88),
+        },
+        fuzz: 0.0,
+    };
 
     object_list.push(Box::new(FlipNormals::new(Box::new(YZRect {
         y0: 0.0,
@@ -139,14 +150,14 @@ fn cornell_box() -> Vec<Box<Hittable>> {
         k: 0.0,
         material: red,
     }));
-    object_list.push(Box::new(XZRect {
+    object_list.push(Box::new(FlipNormals::new(Box::new(XZRect {
         x0: 213.0,
         x1: 343.0,
         z0: 227.0,
         z1: 332.0,
         k: 554.0,
         material: light,
-    }));
+    }))));
     object_list.push(Box::new(FlipNormals::new(Box::new(XZRect {
         x0: 0.0,
         x1: 555.0,
@@ -171,29 +182,47 @@ fn cornell_box() -> Vec<Box<Hittable>> {
         k: 555.0,
         material: white.clone(),
     }))));
-    object_list.push(Box::new(Translate {
-        object: Box::new(RotateY::new(
-            Box::new(Cube::new(
-                Vector3::new(0.0, 0.0, 0.0),
-                Vector3::new(165.0, 165.0, 165.0),
-                white.clone(),
-            )),
-            -18.0,
-        )),
-        offset: Vector3::new(130.0, 0.0, 65.0),
+    // object_list.push(Box::new(Translate {
+    //     object: Box::new(RotateY::new(
+    //         Box::new(Cube::new(
+    //             Vector3::new(0.0, 0.0, 0.0),
+    //             Vector3::new(165.0, 165.0, 165.0),
+    //             white,
+    //         )),
+    //         -18.0,
+    //     )),
+    //     offset: Vector3::new(130.0, 0.0, 65.0),
+    // }));
+    object_list.push(Box::new(Sphere {
+        center: Vector3::new(190.0, 90.0, 190.0),
+        radius: 90.0,
+        material: Material::Dielectric { ref_idx: 1.5 },
     }));
     object_list.push(Box::new(Translate {
         object: Box::new(RotateY::new(
             Box::new(Cube::new(
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(165.0, 330.0, 165.0),
-                white.clone(),
+                white,
             )),
             15.0,
         )),
         offset: Vector3::new(265.0, 0.0, 295.0),
     }));
-    object_list
+
+    let cornell_camera: Camera = Camera::new(
+        Vector3::new(278.0, 270.0, -800.0),
+        Vector3::new(278.0, 270.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        40.0,
+        aspect,
+        0.0,
+        10.0,
+        0.0,
+        1.0,
+    );
+
+    (object_list, cornell_camera)
 }
 
 fn cornell_smoke() -> Vec<Box<Hittable>> {
@@ -518,29 +547,57 @@ fn final_scene() -> Vec<Box<Hittable>> {
     list
 }
 
-fn random_in_unit_sphere() -> Vector3 {
-    let mut p: Vector3;
-    loop {
-        let mut rng = rand::thread_rng();
-        p = 2.0 * Vector3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>())
-            - Vector3::new(1.0, 1.0, 1.0); // -1 -> 1
-        if p.squared_length() < 1.0 {
-            break;
-        }
-    }
-    p
-}
-
 fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
     // some of the rays hit at 0.00000001 instead of 0.0
     // so ignore those to remove noise
     match world.hit(r, 0.001, std::f32::MAX) {
         Some((rec, material)) => {
-            let emitted: Vector3 = material.emitted(rec.u, rec.v, &rec.p);
+            let emitted: Vector3 = material.emitted(r, &rec, rec.u, rec.v, &rec.p);
             if depth < 50 {
-                match material.scatter(r, rec) {
-                    Some((attenuation, scattered)) => {
-                        emitted + attenuation * color(&scattered, world, depth + 1)
+                match material.scatter(r, &rec) {
+                    Some(scatter_record) => {
+                        //TODO: find a way to pass this in as an argument
+                        let light_shape: XZRect = XZRect {
+                            x0: 213.0,
+                            x1: 343.0,
+                            z0: 227.0,
+                            z1: 332.0,
+                            k: 554.0,
+                            material: Material::DiffuseLight {
+                                emit: Texture::ConstantTexture {
+                                    color: Vector3::new(15.0, 15.0, 15.0),
+                                },
+                            },
+                        };
+                        let sphere_shape: Sphere = Sphere {
+                            center: Vector3::new(190.0, 90.0, 190.0),
+                            radius: 90.0,
+                            material: Material::Lambertian {
+                                albedo: Texture::ConstantTexture {
+                                    color: Vector3::new(0.7, 0.7, 0.7),
+                                },
+                            },
+                        };
+                        let object_list: ObjectList =
+                            ObjectList::new(vec![Box::new(light_shape), Box::new(sphere_shape)]);
+
+                        if scatter_record.is_specular {
+                            return scatter_record.attenuation
+                                * color(&scatter_record.specular_ray.unwrap(), world, depth + 1);
+                        }
+                        let plight: HittablePDF = HittablePDF {
+                            o: rec.p,
+                            hittable: Box::new(object_list),
+                        };
+                        let p: MixturePDF =
+                            MixturePDF::new(Box::new(plight), scatter_record.pdf.unwrap());
+                        let scattered = Ray::new(rec.p, p.generate(), r.time);
+                        let pdf_val = p.value(scattered.direction());
+                        emitted
+                            + scatter_record.attenuation
+                                * material.scattering_pdf(r, &rec, &scattered)
+                                * color(&scattered, world, depth + 1)
+                                / pdf_val
                     }
                     None => emitted,
                 }
@@ -560,10 +617,10 @@ fn color(r: &Ray, world: &ObjectList, depth: usize) -> Vector3 {
 fn main() {
     let cpu_num = num_cpus::get() - 1; // leave some for the rest of the processes
     let now = Instant::now();
-    let width = 1024;
-    let height = 720;
+    let width = 500;
+    let height = 500;
     // larger makes blur/shadows/antialias smoother
-    let smoothness: u32 = 10000;
+    let smoothness: u32 = 100;
     // use one less thread for exact division
     // the last one will have less pixels to calculate
     let thread_rows = height / cpu_num + 1;
@@ -572,17 +629,6 @@ fn main() {
         Vector3::new(0.0, 0.0, 0.0),
         Vector3::new(0.0, 1.0, 0.0),
         36.0,
-        width as f32 / height as f32,
-        0.0,
-        10.0,
-        0.0,
-        1.0,
-    );
-    let cornell_camera: &Camera = &Camera::new(
-        Vector3::new(278.0, 278.0, -800.0),
-        Vector3::new(278.0, 278.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        40.0,
         width as f32 / height as f32,
         0.0,
         10.0,
@@ -601,7 +647,8 @@ fn main() {
         1.0,
     );
 
-    let mut scene = final_scene();
+    let (scene, cornell_camera) = cornell_box(width as f32 / height as f32);
+    let camera = &cornell_camera;
     // let balls = random_scene2();
     // scene.push(Box::new(create_binary_tree(balls, 0.0, 1.0)));
     let world = &ObjectList::new(scene);
@@ -629,7 +676,6 @@ fn main() {
                         // also subtract one because the for loop isn't inclusive
                         // on the right hand side
                         let inverted_y = thread_rows - y - 1;
-                        // println!("{}", i);
 
                         let inverted_row = ((cpu_num - i - 1) * thread_rows + inverted_y) as f32;
                         let mut rng = rand::thread_rng();
@@ -640,20 +686,21 @@ fn main() {
                         for _ in 0..smoothness {
                             let u = (x as f32 + rng.gen::<f32>()) / width as f32;
                             let v = (inverted_row + rng.gen::<f32>()) / height as f32;
-                            let r = final_camera.get_ray(u, v);
-                            col += color(&r, &world, 0);
+                            let r = camera.get_ray(u, v);
+                            col += de_nan(color(&r, &world, 0));
                         }
                         col /= smoothness as f32;
                         // remove the gamma of 2 from the color (raise to power of 1/2)
                         col = Vector3::new(col[0].sqrt(), col[1].sqrt(), col[2].sqrt());
-                        let ir = (255.99 * &col[0]) as u8;
-                        let ig = (255.99 * &col[1]) as u8;
-                        let ib = (255.99 * &col[2]) as u8;
+                        let ir = clamp(255.99 * &col[0], 0.0, 255.99);
+                        let ig = clamp(255.99 * &col[1], 0.0, 255.99);
+                        let ib = clamp(255.99 * &col[2], 0.0, 255.99);
+
                         // save buffer values
                         let buffer_pos = y * width + x;
-                        row[buffer_pos][0] = ir as f32;
-                        row[buffer_pos][1] = ig as f32;
-                        row[buffer_pos][2] = ib as f32;
+                        row[buffer_pos][0] = ir;
+                        row[buffer_pos][1] = ig;
+                        row[buffer_pos][2] = ib;
                     }
                 }
             });

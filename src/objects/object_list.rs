@@ -1,7 +1,10 @@
+use rand::Rng;
+
 use super::super::aabb::{surrounding_box, Aabb};
 use super::super::hittable::{HitRecord, Hittable};
 use super::super::material::Material;
 use super::super::ray::Ray;
+use super::super::vector3::Vector3;
 
 pub struct ObjectList {
     pub list: Vec<Box<Hittable>>,
@@ -60,5 +63,18 @@ impl Hittable for ObjectList {
         }
 
         Some(hit_bbox)
+    }
+    fn pdf_value(&self, o: Vector3, v: Vector3) -> f32 {
+        let weight: f32 = 1.0 / self.list.len() as f32;
+        let mut sum: f32 = 0.0;
+        for object in &self.list {
+            sum += weight * object.pdf_value(o, v);
+        }
+        sum
+    }
+    fn random(&self, o: Vector3) -> Vector3 {
+        let mut rng = rand::thread_rng();
+        let i: usize = (rng.gen::<f32>() * self.list.len() as f32) as usize;
+        self.list[i].random(o)
     }
 }
